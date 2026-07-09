@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Karar kodları (Erecon /erecon/update 3. PARAM).
 # Dokümandaki örnekte 1 = "Mutabakat onaylandı" -> mutabık.
 # İtiraz kodu doküman/örnekte yok; İbrahim ekibinden teyit edilecek (şimdilik 2).
-KARAR_KODU = {"mutabik": "1", "itiraz": "2"}
+KARAR_KODU = {"mutabik": "1", "itiraz": "0"}  # 1=onay, 0=itiraz (İbrahim teyidi bekleniyor)
 
 
 @dataclass
@@ -49,6 +49,18 @@ class Mutabakat:
     firma_pb: str
     satirlar: list = field(default_factory=list)
     toplam: Decimal = Decimal("0")
+    # Erecon/Logo mutabakat mektubundaki ek alanlar (opsiyonel):
+    vkn: str = ""
+    donem_ay: str = ""
+    donem_yil: str = ""
+    gonderilme_zamani: str = ""
+    yetkili_adi: str = ""
+    yetkili_unvani: str = ""
+    email: str = ""
+    tel: str = ""
+    fax: str = ""
+    mektup_url: str = ""      # Mutabakat Mektubu (PDF) linki
+    ekstre_url: str = ""      # Ekstre dosyası linki
 
 
 class BaseDataSource:
@@ -74,6 +86,17 @@ class MockDataSource(BaseDataSource):
                 MutabakatSatiri("Borç", Decimal("79120.28"), "TL", Decimal("79120.28"), "TL"),
             ],
             toplam=Decimal("-8456743.27"),
+            vkn="5400382777",
+            donem_ay="Mayıs",
+            donem_yil="2026",
+            gonderilme_zamani="07.07.2026 11:59:32",
+            yetkili_adi="Muhasebe Muhasebe",
+            yetkili_unvani="MUHASEBE ŞEFİ",
+            email="muhasebe@ornekfirma.com",
+            tel="(352) 207 70 00",
+            fax="-",
+            mektup_url="",
+            ekstre_url="",
         )
 
     def sifre_dogru(self, token: str, girilen: str) -> bool:
@@ -103,12 +126,12 @@ class ErpDataSource(BaseDataSource):
         logger.info("Erecon /erecon/list yanıtı (parse için ham): %s", xml_text[:2000])
         return _parse_list_response(xml_text, token=token)
 
+    # Şifre doğrulama: Dokümanda müşteri şifresi için bir uç yok. Netleşene
+    # kadar geçici olarak mock şifre (1234) kullanılıyor.
+    SIFRE = "1234"
+
     def sifre_dogru(self, token: str, girilen: str) -> bool:
-        # Dokümanda müşteri şifresini doğrulayan bir uç yok; doğrulama modeli
-        # (GUID mi yeterli, ayrı bir uç mu var) İbrahim ekibiyle netleşecek.
-        raise NotImplementedError(
-            "Erecon şifre doğrulama modeli henüz tanımlı değil."
-        )
+        return girilen.strip() == self.SIFRE
 
 
 def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:

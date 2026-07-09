@@ -471,3 +471,7 @@ textarea.form-input { resize: vertical; min-height: 104px; line-height: 1.5; }
     .error-card { padding: 36px 22px; }
     .error-card .error-code { font-size: 52px; }
 }
+
+/* Mutabakat mektubu / ekstre indirme butonları */
+.doc-files { display: flex; gap: 12px; flex-wrap: wrap; margin: 18px 0 4px; }
+.doc-files .btn { text-decoration: none; }

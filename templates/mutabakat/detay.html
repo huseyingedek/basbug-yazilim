@@ -33,6 +33,24 @@
             <div class="info-item"><span>Firma Para Birimi</span><strong>{{ m.firma_pb }}</strong></div>
         </div>
 
+        {% if m.vkn or m.yetkili_adi or m.donem_ay or m.gonderilme_zamani %}
+        <div class="info-grid">
+            {% if m.vkn %}<div class="info-item"><span>VKN / TCKN</span><strong>{{ m.vkn }}</strong></div>{% endif %}
+            {% if m.donem_ay or m.donem_yil %}<div class="info-item"><span>Dönem</span><strong>{{ m.donem_ay }} {{ m.donem_yil }}</strong></div>{% endif %}
+            {% if m.yetkili_adi %}<div class="info-item"><span>Yetkili</span><strong>{{ m.yetkili_adi }}{% if m.yetkili_unvani %} · {{ m.yetkili_unvani }}{% endif %}</strong></div>{% endif %}
+            {% if m.email %}<div class="info-item"><span>E-posta</span><strong>{{ m.email }}</strong></div>{% endif %}
+            {% if m.tel %}<div class="info-item"><span>Telefon</span><strong>{{ m.tel }}</strong></div>{% endif %}
+            {% if m.gonderilme_zamani %}<div class="info-item"><span>Gönderilme</span><strong>{{ m.gonderilme_zamani }}</strong></div>{% endif %}
+        </div>
+        {% endif %}
+
+        {% if m.mektup_url or m.ekstre_url %}
+        <div class="doc-files">
+            {% if m.mektup_url %}<a class="btn btn-outline" href="{{ m.mektup_url }}" target="_blank" rel="noopener">Mutabakat Mektubu</a>{% endif %}
+            {% if m.ekstre_url %}<a class="btn btn-outline" href="{{ m.ekstre_url }}" target="_blank" rel="noopener">Ekstre Dosyası</a>{% endif %}
+        </div>
+        {% endif %}
+
         <div class="balance-callout">
             <div>
                 <span class="bc-label">Mutabakat Bakiyesi (Firma Para Birimi)</span>
