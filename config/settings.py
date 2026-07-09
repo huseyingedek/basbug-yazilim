@@ -108,7 +108,6 @@ STORAGES = {
     "staticfiles": {"BACKEND": _staticfiles_backend},
 }
 
-
 # === Mutabakat uygulaması ayarları ===
 # Veri kaynağı: "mock" (geliştirme) veya "erp" (gerçek servis)
 MUTABAKAT_DATA_SOURCE = env("MUTABAKAT_DATA_SOURCE", "mock")
@@ -116,10 +115,12 @@ MUTABAKAT_DATA_SOURCE = env("MUTABAKAT_DATA_SOURCE", "mock")
 SERVIS_URL = env("SERVIS_URL", "")
 
 # === Üretim güvenlik ayarları (DEBUG=False iken) ===
-# Ters vekil (IIS/Nginx) arkasında HTTPS'i doğru algılamak için.
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", True)
+    # Varsayılan False: HTTPS'e zorlamayı IIS kenarda yapar. Proxy'nin
+    # X-Forwarded-Proto başlığını ilettiğini doğruladıktan sonra .env'de
+    # SECURE_SSL_REDIRECT=True yapabilirsiniz (aksi halde yönlendirme döngüsü olur).
+    SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", False)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
