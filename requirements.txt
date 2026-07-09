@@ -1,5 +1,8 @@
 Django>=5.0,<5.1
 python-dotenv>=1.0
-# Prod'da gerçek veritabanına geçince ilgili sürücü eklenir:
-# psycopg2-binary>=2.9      # PostgreSQL
-# mysqlclient>=2.2          # MySQL / MariaDB
+whitenoise>=6.6        # statik dosyaları Django'nun kendisi servis eder
+waitress>=3.0          # Windows üretim WSGI sunucusu
+
+# Bu proje veritabanı KULLANMAZ; bu yüzden bir DB sürücüsüne gerek yoktur.
+# İleride servise HTTP isteği atmak için 'requests' eklenebilir:
+# requests>=2.31

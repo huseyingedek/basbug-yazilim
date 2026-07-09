@@ -6,15 +6,21 @@ müşteriye ait TEK mutabakat kaydı gösterilir. Bu katman veriyi nereden aldı
 soyutlar: şu an "mock", ileride ErpDataSource doldurulacak; view/şablonlar
 değişmez.
 
+Bu proje VERİTABANI KULLANMAZ. Müşteri kararı yerelde saklanmaz; ileride
+servise HTTP isteğiyle iletilecektir (bkz. gonder_cevap).
+
 Ayar: settings.MUTABAKAT_DATA_SOURCE = "mock" | "erp"
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -98,3 +104,38 @@ def get_kayit(token: str) -> Optional[Mutabakat]:
 
 def sifre_dogru(token: str, girilen: str) -> bool:
     return get_data_source().sifre_dogru(token, girilen)
+
+
+def gonder_cevap(token, mutabakat, karar, mesaj="", ad_soyad="", dosya=None):
+    """
+    Müşterinin kararını (Mutabıkız / İtiraz) işleyen uç.
+
+    Bu proje veritabanı KULLANMAZ; karar yerelde saklanmaz. İbrahim'in servisi
+    hazır olunca burada SERVIS_URL adresine bir HTTP isteği (POST) atılacaktır.
+    Şimdilik yalnızca log'a yazar; akışı bozmaz.
+
+    Örnek (ileride):
+        import requests
+        requests.post(
+            settings.SERVIS_URL,
+            json={
+                "token": token,
+                "dokuman_id": mutabakat.dokuman_id,
+                "cari_kod": mutabakat.cari_kod,
+                "karar": karar,
+                "mesaj": mesaj,
+                "ad_soyad": ad_soyad,
+            },
+            timeout=15,
+        )
+    """
+    logger.info(
+        "Mutabakat karari alindi | token=%s cari=%s karar=%s ad_soyad=%s "
+        "mesaj=%r dosya=%s",
+        token,
+        getattr(mutabakat, "cari_kod", ""),
+        karar,
+        ad_soyad,
+        mesaj,
+        getattr(dosya, "name", None),
+    )

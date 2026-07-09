@@ -1,2 +1,1 @@
-# Django admin paneli bu projede kullanılmıyor.
-# Mutabakat cevapları veritabanında saklanır; ileride ERP servisine iletilecek.
+# Django admin paneli bu projede kullanılmıyor (veritabanı yok).

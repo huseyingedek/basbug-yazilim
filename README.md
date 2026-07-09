@@ -7,6 +7,7 @@ Online cari hesap mutabakat portalı. Müşteriye e-posta ile gönderilen bağla
 
 - Python + Django 5
 - Django template + saf CSS/JS (menüsüz, birkaç ekranlık akış)
+- **Veritabanı yok** — bu bir frontend / görüntü katmanı; veri ileride servisten çekilir
 - Veri katmanı soyut: şimdilik `mock`, ileride ERP servisi (`erp`)
 
 ## Kurulum
@@ -21,19 +22,20 @@ source .venv/bin/activate
 pip install -r requirements.txt
 copy .env.example .env        # Windows  (macOS/Linux: cp .env.example .env)
 
-python manage.py migrate
+# migrate GEREKMEZ — proje veritabanı kullanmaz.
 python manage.py runserver
 ```
+
+Sunucuya kurulum (Windows Server + IIS) için: [DEPLOY.md](DEPLOY.md)
 
 ## Akış / URL'ler
 
 | URL | Ekran |
 |-----|-------|
-| `/` | Ana karşılama sayfası (boş, görsel) |
+| `/` | Şifre giriş ekranı |
 | `/m/<token>/` | Şifre giriş ekranı (maildeki link) |
 | `/m/<token>/detay/` | Mutabakat bilgileri + karar |
 | `/m/<token>/cevap/` | Kararın işlendiği uç (POST) |
-| `/m/<token>/tesekkur/` | Bildirim alındı ekranı |
 
 ## Demo
 
@@ -42,13 +44,14 @@ Deneme bağlantısı: `http://127.0.0.1:8000/m/demo/` — **şifre: 1234**
 
 ## Gerçek veriye geçiş
 
-İbrahim'in ERP servisi/DB'si hazır olunca:
+İbrahim'in ERP servisi hazır olunca:
 
-1. `.env` içinde `MUTABAKAT_DATA_SOURCE=erp` yapılır, `ERP_SERVICE_URL` / `ERP_SERVICE_TOKEN` doldurulur.
-2. `mutabakat/services.py` içindeki `ErpDataSource.get()` doldurulur (servis çağrısı → `Mutabakat` nesnesi).
-3. Gerekirse DB bağlantısı `.env`'deki `DB_*` değerleriyle ayarlanır.
+1. `.env` içinde `MUTABAKAT_DATA_SOURCE=erp` yapılır, `SERVIS_URL` doldurulur.
+2. `mutabakat/services.py` içindeki `ErpDataSource.get_kayit()` doldurulur (servis çağrısı → `Mutabakat` nesnesi).
+3. Aynı dosyadaki `gonder_cevap()` içinde müşteri kararı servise POST edilir.
 
 View'lar ve template'ler değişmez — sadece veri kaynağı adaptörü değişir.
+Veritabanı gerekmez.
 
 ## Marka / tema
 

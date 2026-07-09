@@ -3,8 +3,7 @@ from django.http import Http404
 from django.shortcuts import redirect, render
 
 from .forms import CevapForm, SifreForm
-from .models import MutabakatCevap
-from .services import get_kayit, sifre_dogru
+from .services import get_kayit, gonder_cevap, sifre_dogru
 
 
 def _session_key(token):
@@ -74,11 +73,10 @@ def cevap(request, token):
         return render(request, "mutabakat/detay.html",
                       {"m": m, "form": form, "token": token})
 
-    MutabakatCevap.objects.create(
+    # Karar yerelde saklanmaz; servise iletilir (şimdilik stub — bkz. services.py).
+    gonder_cevap(
         token=token,
-        dokuman_id=m.dokuman_id,
-        cari_kod=m.cari_kod,
-        cari_adi=m.cari_adi,
+        mutabakat=m,
         karar=form.cleaned_data["karar"],
         mesaj=form.cleaned_data["mesaj"],
         ad_soyad=form.cleaned_data["ad_soyad"],
