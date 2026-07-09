@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Beklenmeyen hata — Başbuğ E-Mutabakat{% endblock %}
+{% block body_class %}page-error{% endblock %}
+
+{% block content %}
+<section class="error-hero">
+    <div class="error-card">
+        <span class="error-code">500</span>
+        <h1>Beklenmeyen bir hata oluştu</h1>
+        <p>İşleminiz sırasında bir sorun yaşandı. Lütfen bir süre sonra tekrar deneyiniz.</p>
+        <a href="{% url 'mutabakat:index' %}" class="btn btn-primary">
+            Giriş ekranına dön
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+    </div>
+</section>
+{% endblock %}

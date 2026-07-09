@@ -425,3 +425,50 @@ textarea.form-input { resize: vertical; min-height: 104px; line-height: 1.5; }
 .ltable tbody tr.lt-empty { cursor: default; background: var(--paper); }
 .ltable tbody tr.lt-empty:hover { background: var(--paper); }
 .lt-empty td { text-align: center; color: var(--muted); padding: 34px 18px; font-size: 14px; }
+
+/* ============================================================
+   Hata sayfaları (404 / 500)
+   ============================================================ */
+.error-hero {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    padding: 40px 0;
+}
+.error-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow);
+    padding: 48px 40px;
+    max-width: 520px;
+    width: 100%;
+    text-align: center;
+}
+.error-card .error-code {
+    display: inline-block;
+    font-family: var(--display);
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.03em;
+    color: var(--red);
+    margin-bottom: 14px;
+}
+.error-card h1 {
+    font-size: 24px;
+    margin: 0 0 12px;
+    color: var(--ink);
+}
+.error-card p {
+    color: var(--ink-soft);
+    margin: 0 0 28px;
+    font-size: 15px;
+}
+.error-card .btn { display: inline-flex; }
+
+@media (max-width: 560px) {
+    .error-card { padding: 36px 22px; }
+    .error-card .error-code { font-size: 52px; }
+}
