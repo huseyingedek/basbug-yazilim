@@ -114,6 +114,16 @@ MUTABAKAT_DATA_SOURCE = env("MUTABAKAT_DATA_SOURCE", "mock")
 # Servisin adresi (veriyi buradan çekeceğiz / kararı buraya ileteceğiz).
 SERVIS_URL = env("SERVIS_URL", "")
 
+# === Erecon (ERP) servis ayarları ===
+# Kimlik (JWT) ve mutabakat servislerinin adresleri + kimlik bilgileri.
+# Gerçek değerler .env dosyasına yazılır (repoya konmaz).
+ERECON_IDENTITY_BASE = env("ERECON_IDENTITY_BASE", "http://dev.basbugtech.local/inf/identity")
+ERECON_MW_BASE = env("ERECON_MW_BASE", "http://dev.basbugtech.local/mw/services/erecon")
+ERECON_USERNAME = env("ERECON_USERNAME", "")
+ERECON_PASSWORD = env("ERECON_PASSWORD", "")
+ERECON_CLIENT_ID = env("ERECON_CLIENT_ID", "")
+ERECON_CLIENT_SECRET = env("ERECON_CLIENT_SECRET", "")
+
 # === Üretim güvenlik ayarları (DEBUG=False iken) ===
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")

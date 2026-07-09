@@ -1,13 +1,12 @@
 """
 Mutabakat veri katmanı (tek-kayıt akışı).
 
-Her müşteriye e-posta ile link + şifre gönderilir. Şifre doğrulanınca o
+Her müşteriye e-posta ile link (GUID) + şifre gönderilir. Şifre doğrulanınca o
 müşteriye ait TEK mutabakat kaydı gösterilir. Bu katman veriyi nereden aldığını
-soyutlar: şu an "mock", ileride ErpDataSource doldurulacak; view/şablonlar
-değişmez.
+soyutlar: "mock" (geliştirme) veya "erp" (Erecon servisleri).
 
-Bu proje VERİTABANI KULLANMAZ. Müşteri kararı yerelde saklanmaz; ileride
-servise HTTP isteğiyle iletilecektir (bkz. gonder_cevap).
+Bu proje VERİTABANI KULLANMAZ. "erp" modunda veri Erecon /erecon/list'ten
+çekilir, müşteri kararı /erecon/update'e iletilir (bkz. mutabakat/erecon.py).
 
 Ayar: settings.MUTABAKAT_DATA_SOURCE = "mock" | "erp"
 """
@@ -20,7 +19,14 @@ from typing import Optional
 
 from django.conf import settings
 
+from . import erecon
+
 logger = logging.getLogger(__name__)
+
+# Karar kodları (Erecon /erecon/update 3. PARAM).
+# Dokümandaki örnekte 1 = "Mutabakat onaylandı" -> mutabık.
+# İtiraz kodu doküman/örnekte yok; İbrahim ekibinden teyit edilecek (şimdilik 2).
+KARAR_KODU = {"mutabik": "1", "itiraz": "2"}
 
 
 @dataclass
@@ -47,7 +53,6 @@ class Mutabakat:
 
 class BaseDataSource:
     def get_kayit(self, token: str) -> Optional[Mutabakat]:
-        """Bu token'a (müşteriye) ait tek mutabakat kaydını döndürür."""
         raise NotImplementedError
 
     def sifre_dogru(self, token: str, girilen: str) -> bool:
@@ -77,18 +82,46 @@ class MockDataSource(BaseDataSource):
 
 class ErpDataSource(BaseDataSource):
     """
-    Gerçek ERP servisi. İbrahim servisi verince doldurulacak.
-    get_kayit(token) -> token'a karşılık gelen müşterinin tek mutabakat kaydı.
-    sifre_dogru(token, girilen) -> maildeki şifre doğrulaması.
+    Erecon (gerçek servis) veri kaynağı.
+
+    get_kayit(token): /erecon/list çağırır ve XML yanıtı Mutabakat'a çevirir.
+      NOT: /erecon/list İKİ parametre ister: GUID (link anahtarı) + cari kod.
+      Bizim URL'deki token = GUID. Cari kodun nereden geleceği İbrahim ekibiyle
+      netleşecek (linkte mi, yanıtta mı). Şimdilik token "guid" veya "guid|cari"
+      biçiminde çözülür.
     """
 
+    def _guid_cari(self, token: str):
+        if "|" in token:
+            guid, cari = token.split("|", 1)
+            return guid.strip(), cari.strip()
+        return token.strip(), erecon._cfg("ERECON_DEFAULT_CARI", "")
+
     def get_kayit(self, token: str) -> Optional[Mutabakat]:
-        raise NotImplementedError(
-            "ERP veri kaynağı henüz bağlanmadı. .env içinde MUTABAKAT_DATA_SOURCE=mock kullanın."
-        )
+        guid, cari = self._guid_cari(token)
+        xml_text = erecon.erecon_list(guid, cari)
+        logger.info("Erecon /erecon/list yanıtı (parse için ham): %s", xml_text[:2000])
+        return _parse_list_response(xml_text, token=token)
 
     def sifre_dogru(self, token: str, girilen: str) -> bool:
-        raise NotImplementedError
+        # Dokümanda müşteri şifresini doğrulayan bir uç yok; doğrulama modeli
+        # (GUID mi yeterli, ayrı bir uç mu var) İbrahim ekibiyle netleşecek.
+        raise NotImplementedError(
+            "Erecon şifre doğrulama modeli henüz tanımlı değil."
+        )
+
+
+def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
+    """
+    /erecon/list XML yanıtını Mutabakat nesnesine çevirir.
+
+    TODO: Gerçek yanıt şeması (etiket adları, satır yapısı) elimize ulaşınca
+    burası doldurulacak. Şu an yanıt örneği olmadığı için parse yapılamıyor.
+    """
+    raise NotImplementedError(
+        "Erecon /erecon/list yanıt şeması bekleniyor. Dev ortamdan bir örnek "
+        "yanıt alınınca bu fonksiyon yazılacak."
+    )
 
 
 def get_data_source() -> BaseDataSource:
@@ -108,34 +141,30 @@ def sifre_dogru(token: str, girilen: str) -> bool:
 
 def gonder_cevap(token, mutabakat, karar, mesaj="", ad_soyad="", dosya=None):
     """
-    Müşterinin kararını (Mutabıkız / İtiraz) işleyen uç.
+    Müşterinin kararını (Mutabıkız / İtiraz) işler.
 
-    Bu proje veritabanı KULLANMAZ; karar yerelde saklanmaz. İbrahim'in servisi
-    hazır olunca burada SERVIS_URL adresine bir HTTP isteği (POST) atılacaktır.
-    Şimdilik yalnızca log'a yazar; akışı bozmaz.
-
-    Örnek (ileride):
-        import requests
-        requests.post(
-            settings.SERVIS_URL,
-            json={
-                "token": token,
-                "dokuman_id": mutabakat.dokuman_id,
-                "cari_kod": mutabakat.cari_kod,
-                "karar": karar,
-                "mesaj": mesaj,
-                "ad_soyad": ad_soyad,
-            },
-            timeout=15,
-        )
+    - "mock" modunda: yalnızca log'a yazar (yerelde saklanmaz).
+    - "erp" modunda: Erecon /erecon/update'e iletir.
+      PARAM sırası: guid, cari, karar_kodu, dosya(base64), ad_soyad, mesaj.
     """
+    kaynak = getattr(settings, "MUTABAKAT_DATA_SOURCE", "mock").lower()
+
+    if kaynak == "erp":
+        guid = getattr(mutabakat, "token", token) or token
+        cari = getattr(mutabakat, "cari_kod", "")
+        karar_kodu = KARAR_KODU.get(karar, karar)
+        dosya_b64 = erecon.dosya_to_base64(dosya)
+        sonuc = erecon.erecon_update(
+            guid=guid, cari=cari, karar_kodu=karar_kodu,
+            dosya_b64=dosya_b64, ad_soyad=ad_soyad, mesaj=mesaj,
+        )
+        logger.info("Erecon /erecon/update sonucu: %s", (sonuc or "")[:500])
+        return sonuc
+
     logger.info(
-        "Mutabakat karari alindi | token=%s cari=%s karar=%s ad_soyad=%s "
+        "Mutabakat kararı alındı (mock) | token=%s cari=%s karar=%s ad_soyad=%s "
         "mesaj=%r dosya=%s",
-        token,
-        getattr(mutabakat, "cari_kod", ""),
-        karar,
-        ad_soyad,
-        mesaj,
+        token, getattr(mutabakat, "cari_kod", ""), karar, ad_soyad, mesaj,
         getattr(dosya, "name", None),
     )
+    return None
