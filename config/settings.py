@@ -91,7 +91,7 @@ TIME_ZONE = "Europe/Istanbul"
 USE_I18N = True
 USE_TZ = True
 
-# === Statik ve medya dosyaları ===
+# === Statik dosyalar ===
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
@@ -108,8 +108,6 @@ STORAGES = {
     "staticfiles": {"BACKEND": _staticfiles_backend},
 }
 
-MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
 # === Mutabakat uygulaması ayarları ===
 # Veri kaynağı: "mock" (geliştirme) veya "erp" (gerçek servis)
