@@ -110,10 +110,9 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -.02em; }
     background-color: var(--ink-900);          /* görsel yoksa yedek zemin */
     background-image:
         linear-gradient(150deg, rgba(18,19,21,.90) 0%, rgba(27,28,31,.80) 55%, rgba(43,45,49,.74) 100%),  /* okunabilirlik karartması */
-        radial-gradient(1100px 500px at 82% -10%, rgba(180,51,46,.34), transparent 55%),                  /* marka kırmızısı ışıltı */
-        url("../img/hero.jpg");                                                                            /* sitenin ana görseli (koyulacak) */
-    background-size: cover, cover, cover;
-    background-position: center, center, center;
+        radial-gradient(1100px 500px at 82% -10%, rgba(180,51,46,.34), transparent 55%);                  /* marka kırmızısı ışıltı */
+    background-size: cover, cover;
+    background-position: center, center;
     background-repeat: no-repeat;
 }
 /* ince ışık çizgileri dokusu */
