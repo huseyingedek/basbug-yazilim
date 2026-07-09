@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Teşekkürler — Başbuğ E-Mutabakat{% endblock %}
+{% block body_class %}page-thanks{% endblock %}
+
+{% block content %}
+<section class="thanks-wrap">
+    <div class="thanks-card">
+        {% if karar == "itiraz" %}
+            <div class="thanks-icon thanks-icon--no">!</div>
+            <h1>Bildiriminiz Alındı</h1>
+            <p>
+                Mutabık olmadığınıza dair bildiriminiz tarafımıza ulaşmıştır.
+                İlgili birimimiz en kısa sürede sizinle iletişime geçecektir.
+            </p>
+        {% else %}
+            <div class="thanks-icon thanks-icon--ok">✓</div>
+            <h1>Mutabakat Onaylandı</h1>
+            <p>
+                Onayınız tarafımıza başarıyla ulaşmıştır. İlginiz ve iş birliğiniz
+                için teşekkür ederiz.
+            </p>
+        {% endif %}
+        <a href="{% url 'mutabakat:index' %}" class="btn btn-outline">Ana sayfaya dön</a>
+    </div>
+</section>
+{% endblock %}

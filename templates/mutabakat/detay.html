@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% load mutabakat_extras %}
+{% load static %}
+
+{% block title %}Mutabakat Detayı — Başbuğ E-Mutabakat{% endblock %}
+{% block body_class %}page-detay{% endblock %}
+
+{% block content %}
+<section class="doc">
+    <!-- Kurumsal marka bandı -->
+    <div class="doc-brand">
+        <div>
+            <span class="doc-brand-kicker">{{ m.konu }}</span>
+            <h1>Cari Hesap Mutabakatı</h1>
+        </div>
+        <div class="doc-brand-meta">
+            <div><span>Doküman No</span><strong>{{ m.dokuman_id }}</strong></div>
+            <div><span>Tarih</span><strong>{{ m.mutabakat_tarihi }}</strong></div>
+        </div>
+    </div>
+
+    <div class="doc-body">
+        <p class="doc-intro">
+            <strong>{{ m.mutabakat_tarihi }}</strong> tarihi itibarıyla şirketimiz nezdindeki
+            cari hesap bakiye bilgileriniz aşağıdadır. Mutabakatınızın veya uyumsuzluk
+            durumunda farkın belirtilerek tarafımıza bildirilmesini rica ederiz.
+        </p>
+
+        <div class="info-grid">
+            <div class="info-item"><span>Cari Kod</span><strong>{{ m.cari_kod }}</strong></div>
+            <div class="info-item"><span>Cari Adı</span><strong>{{ m.cari_adi }}</strong></div>
+            <div class="info-item"><span>Doküman ID</span><strong>{{ m.dokuman_id }}</strong></div>
+            <div class="info-item"><span>Firma Para Birimi</span><strong>{{ m.firma_pb }}</strong></div>
+        </div>
+
+        <div class="balance-callout">
+            <div>
+                <span class="bc-label">Mutabakat Bakiyesi (Firma Para Birimi)</span>
+                <strong class="bc-amount {% if m.toplam < 0 %}neg{% else %}pos{% endif %}">
+                    {{ m.toplam|tr_para }}<em>{{ m.firma_pb }}</em>
+                </strong>
+            </div>
+            <div class="bc-note">Aşağıdaki dökümü inceleyip bakiyeyi onaylayabilir veya itiraz edebilirsiniz.</div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th>B/A</th>
+                        <th class="num">Tutar</th>
+                        <th>Para Birimi</th>
+                        <th class="num">Tutar (F.Pb)</th>
+                        <th>Firma Para Birimi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in m.satirlar %}
+                    <tr>
+                        <td><span class="tag tag-{{ s.ba|lower }}">{{ s.ba }}</span></td>
+                        <td class="num">{{ s.tutar|tr_para }}</td>
+                        <td>{{ s.para_birimi }}</td>
+                        <td class="num">{{ s.tutar_fpb|tr_para }}</td>
+                        <td>{{ s.firma_pb }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="total-label">TOPLAM</td>
+                        <td class="num total-value {% if m.toplam < 0 %}neg{% else %}pos{% endif %}">
+                            {{ m.toplam|tr_para }}
+                        </td>
+                        <td>{{ m.firma_pb }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="legal-note">
+            <p><strong>Hata ve unutma müstesnadır.</strong></p>
+            <p>
+                Mutabakat veya itirazınızı en geç 30 gün içinde bildirmediğiniz takdirde
+                T.T.K. 94. maddesi gereğince bakiyede mutabık sayılacağınızı hatırlatırız.
+                Bakiyede mutabık olmadığınız takdirde bir hesap ekstrenizin gönderilmesini
+                rica ederiz.
+            </p>
+        </div>
+
+        <div class="decision">
+            <p class="decision-q">Lütfen bakiye durumunu değerlendirip uygun seçeneği işaretleyiniz.</p>
+
+            <form method="post" action="{% url 'mutabakat:cevap' token=token %}"
+                  enctype="multipart/form-data" id="cevapForm" novalidate>
+                {% csrf_token %}
+                <input type="hidden" name="karar" id="kararInput" value="">
+
+                {% if form.non_field_errors %}
+                    <div class="field-error">{{ form.non_field_errors.0 }}</div>
+                {% endif %}
+
+                <div class="decision-btns" id="step-baslangic">
+                    <button type="button" class="btn btn-approve" data-action="mutabik-ask">
+                        ✓ Mutabıkız
+                    </button>
+                    <button type="button" class="btn btn-reject" data-action="itiraz">
+                        ✕ Mutabık Değiliz
+                    </button>
+                </div>
+
+                <div class="panel" id="step-mutabik-ask" hidden>
+                    <div class="panel-head panel-head--ok">✓ Mutabıkız</div>
+                    <p class="panel-ask">Bir mesaj veya dosya eklemek ister misiniz?</p>
+                    <div class="panel-choice">
+                        <button type="button" class="btn btn-outline" data-action="mutabik-extra">Evet, eklemek istiyorum</button>
+                        <button type="button" class="btn btn-approve" data-action="mutabik-gonder">Hayır, gönder</button>
+                    </div>
+                    <button type="button" class="btn-link" data-action="geri">← Vazgeç</button>
+                </div>
+
+                <div class="panel" id="step-form" hidden>
+                    <div class="panel-head" id="formPanelHead"></div>
+                    <p class="panel-ask" id="formPanelAsk"></p>
+
+                    <div class="field">
+                        <label for="{{ form.ad_soyad.id_for_label }}">Ad Soyad (tercihen)</label>
+                        {{ form.ad_soyad }}
+                    </div>
+                    <div class="field">
+                        <label for="{{ form.mesaj.id_for_label }}" id="mesajLabel">Mesaj (tercihen)</label>
+                        {{ form.mesaj }}
+                        {% if form.mesaj.errors %}
+                            <div class="field-error">{{ form.mesaj.errors.0 }}</div>
+                        {% endif %}
+                        <div class="field-error" id="mesajClientErr" hidden>Lütfen nedenini yazınız.</div>
+                    </div>
+                    <div class="field">
+                        <label for="{{ form.dosya.id_for_label }}">Dosya (tercihen)</label>
+                        {{ form.dosya }}
+                    </div>
+
+                    <div class="panel-choice">
+                        <button type="button" class="btn-link" data-action="geri">← Vazgeç</button>
+                        <button type="submit" class="btn btn-block" id="finalSubmit">Gönder</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/app.js' %}"></script>
+{% endblock %}

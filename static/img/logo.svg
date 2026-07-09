@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" role="img" aria-label="Başbuğ">
+  <g fill="#B4332E">
+    <rect x="16" y="18" width="206" height="22" rx="3"/>
+    <rect x="16" y="100" width="92" height="22" rx="3"/>
+    <rect x="134" y="100" width="150" height="22" rx="3"/>
+  </g>
+</svg>
