@@ -111,8 +111,6 @@ STORAGES = {
 # === Mutabakat uygulaması ayarları ===
 # Veri kaynağı: "mock" (geliştirme) veya "erp" (gerçek servis)
 MUTABAKAT_DATA_SOURCE = env("MUTABAKAT_DATA_SOURCE", "mock")
-# Servisin adresi (veriyi buradan çekeceğiz / kararı buraya ileteceğiz).
-SERVIS_URL = env("SERVIS_URL", "")
 
 # === Erecon (ERP) servis ayarları ===
 # Kimlik (JWT) ve mutabakat servislerinin adresleri + kimlik bilgileri.

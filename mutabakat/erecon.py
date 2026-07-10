@@ -66,7 +66,12 @@ def _login() -> dict:
     }
     r = requests.post(url, json=payload, timeout=20)
     r.raise_for_status()
-    data = (r.json() or {}).get("data", {}) or {}
+    j = r.json() or {}
+    if not j.get("isSuccess", True):
+        raise RuntimeError("Erecon login başarısız: %s" % j.get("message"))
+    data = j.get("data") or {}
+    if not data.get("access_token"):
+        raise RuntimeError("Erecon login: access_token boş döndü (kimlik bilgileri/adres hatalı olabilir).")
     _store(data)
     logger.info("Erecon login OK (expires_in=%s)", data.get("expires_in"))
     return data
@@ -81,7 +86,12 @@ def _refresh() -> dict:
     }
     r = requests.post(url, json=payload, timeout=20)
     r.raise_for_status()
-    data = (r.json() or {}).get("data", {}) or {}
+    j = r.json() or {}
+    if not j.get("isSuccess", True):
+        raise RuntimeError("Erecon refresh başarısız: %s" % j.get("message"))
+    data = j.get("data") or {}
+    if not data.get("access_token"):
+        raise RuntimeError("Erecon refresh: access_token boş döndü.")
     _store(data)
     logger.info("Erecon refresh OK")
     return data
@@ -144,26 +154,27 @@ def _mw(path: str) -> str:
     return _cfg("ERECON_MW_BASE").rstrip("/") + path
 
 
-def erecon_list(guid: str, cari: str) -> str:
+def erecon_list(guid: str, kod: str) -> str:
     """
-    Cari mutabakat kaydını çeker.
-    Gövde: <PARAMETERS><PARAM>{guid}</PARAM><PARAM>{cari}</PARAM></PARAMETERS>
-    Dönen: XML metin (şema örneği gelince services.py'de parse edilecek).
+    Mutabakat kaydını çeker.
+    Gövde: <PARAMETERS><PARAM>{guid}</PARAM><PARAM>{kod}</PARAM></PARAMETERS>
+      PARAM1 = GUID (link anahtarı), PARAM2 = 6 haneli doğrulama kodu.
+    Dönen: XML metin (services.py'de Mutabakat'a parse edilir).
     """
-    body = _xml(guid, cari).encode("utf-8")
+    body = _xml(guid, kod).encode("utf-8")
     # Doküman GET diyor ama gövdeyle; requests GET+data destekler.
     r = requests.request("GET", _mw("/erecon/list"), data=body, headers=_headers(), timeout=30)
     r.raise_for_status()
     return r.text
 
 
-def erecon_update(guid: str, cari: str, karar_kodu, dosya_b64: str = "",
+def erecon_update(guid: str, kod: str, karar_kodu, dosya_b64: str = "",
                   ad_soyad: str = "", mesaj: str = "") -> str:
     """
     Müşteri kararını iletir. PARAM sırası (dokümandaki örneğe göre):
-      1) guid  2) cari  3) karar kodu  4) dosya(base64)  5) ad soyad  6) mesaj
+      1) guid  2) kod  3) karar kodu  4) dosya(base64)  5) ad soyad  6) mesaj
     """
-    body = _xml(guid, cari, karar_kodu, dosya_b64 or "", ad_soyad or "", mesaj or "").encode("utf-8")
+    body = _xml(guid, kod, karar_kodu, dosya_b64 or "", ad_soyad or "", mesaj or "").encode("utf-8")
     r = requests.post(_mw("/erecon/update"), data=body, headers=_headers(), timeout=30)
     r.raise_for_status()
     return r.text

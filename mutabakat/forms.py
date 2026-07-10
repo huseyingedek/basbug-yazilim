@@ -2,14 +2,28 @@ from django import forms
 
 
 class SifreForm(forms.Form):
+    """E-posta ile gelen 6 haneli doğrulama kodu."""
+
     sifre = forms.CharField(
-        label="Şifre",
-        widget=forms.PasswordInput(attrs={
+        label="Doğrulama Kodu",
+        min_length=4,
+        max_length=16,
+        widget=forms.TextInput(attrs={
             "class": "form-input",
-            "placeholder": "Mailde iletilen şifreyi giriniz",
+            "placeholder": "Doğrulama kodunu giriniz",
+            "inputmode": "numeric",
+            "pattern": "[0-9]*",
+            "maxlength": "16",
+            "autocomplete": "one-time-code",
             "autofocus": "autofocus",
         }),
     )
+
+    def clean_sifre(self):
+        v = (self.cleaned_data.get("sifre") or "").strip()
+        if not v.isdigit():
+            raise forms.ValidationError("Kod yalnızca rakamlardan oluşmalıdır.")
+        return v
 
 
 class CevapForm(forms.Form):

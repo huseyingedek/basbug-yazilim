@@ -1,20 +1,26 @@
 """
-Mutabakat veri katmanı (tek-kayıt akışı).
+Mutabakat veri katmanı.
 
-Her müşteriye e-posta ile link (GUID) + şifre gönderilir. Şifre doğrulanınca o
-müşteriye ait TEK mutabakat kaydı gösterilir. Bu katman veriyi nereden aldığını
-soyutlar: "mock" (geliştirme) veya "erp" (Erecon servisleri).
+Akış: Müşteriye e-posta ile link (GUID) + doğrulama kodu gönderilir. Müşteri
+linke tıklar, kodu girer; o cariye ait TEK mutabakat kaydı gösterilir.
 
-Bu proje VERİTABANI KULLANMAZ. "erp" modunda veri Erecon /erecon/list'ten
-çekilir, müşteri kararı /erecon/update'e iletilir (bkz. mutabakat/erecon.py).
+Veri kaynağı (settings.MUTABAKAT_DATA_SOURCE):
+  - "mock" : yerel örnek veri (geliştirme). Kod: 123456
+  - "erp"  : Erecon servisleri (gerçek).
 
-Ayar: settings.MUTABAKAT_DATA_SOURCE = "mock" | "erp"
+Erecon /erecon/list yanıt şeması: <TMPCONF><LINE>...</LINE></TMPCONF>
+Erecon /erecon/update yanıt şeması: <MESSAGETABLE><ROW><TYPE>...</TYPE>...</ROW></MESSAGETABLE>
+Hata durumları da MESSAGETABLE (TYPE=E) olarak döner.
+
+Bu proje VERİTABANI KULLANMAZ.
 """
 from __future__ import annotations
 
+import json
 import logging
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Optional
 
 from django.conf import settings
@@ -23,10 +29,15 @@ from . import erecon
 
 logger = logging.getLogger(__name__)
 
-# Karar kodları (Erecon /erecon/update 3. PARAM).
-# Dokümandaki örnekte 1 = "Mutabakat onaylandı" -> mutabık.
-# İtiraz kodu doküman/örnekte yok; İbrahim ekibinden teyit edilecek (şimdilik 2).
-KARAR_KODU = {"mutabik": "1", "itiraz": "0"}  # 1=onay, 0=itiraz (İbrahim teyidi bekleniyor)
+# Karar kodları (Erecon /erecon/update 3. PARAM). 1=onay, 0=itiraz.
+KARAR_KODU = {"mutabik": "1", "itiraz": "0"}
+
+# FINPERIOD (dönem no) -> ay adı
+_AYLAR = {
+    "01": "Ocak", "02": "Şubat", "03": "Mart", "04": "Nisan", "05": "Mayıs",
+    "06": "Haziran", "07": "Temmuz", "08": "Ağustos", "09": "Eylül",
+    "10": "Ekim", "11": "Kasım", "12": "Aralık",
+}
 
 
 @dataclass
@@ -41,15 +52,14 @@ class MutabakatSatiri:
 @dataclass
 class Mutabakat:
     token: str
-    dokuman_id: str
-    cari_kod: str
-    cari_adi: str
-    mutabakat_tarihi: str
-    konu: str
-    firma_pb: str
+    dokuman_id: str = ""
+    cari_kod: str = ""
+    cari_adi: str = ""
+    mutabakat_tarihi: str = ""
+    konu: str = ""
+    firma_pb: str = "TL"
     satirlar: list = field(default_factory=list)
     toplam: Decimal = Decimal("0")
-    # Erecon/Logo mutabakat mektubundaki ek alanlar (opsiyonel):
     vkn: str = ""
     donem_ay: str = ""
     donem_yil: str = ""
@@ -59,94 +69,186 @@ class Mutabakat:
     email: str = ""
     tel: str = ""
     fax: str = ""
-    mektup_url: str = ""      # Mutabakat Mektubu (PDF) linki
-    ekstre_url: str = ""      # Ekstre dosyası linki
+    mektup_url: str = ""      # Mutabakat Mektubu (PDF) indirme linki
+    ekstre_url: str = ""      # Ekstre dosyası indirme linki
+    sfile_b64: str = ""       # Mutabakat mektubu ham base64 (PDF)
+    tfile_b64: str = ""       # Ekstre ham base64
+    confirmcode: str = ""     # ERP CONFIRMCODE (doğrulama kodu)
+    durum: str = ""           # ERECONSTATUS
 
 
 class BaseDataSource:
-    def get_kayit(self, token: str) -> Optional[Mutabakat]:
+    def get_kayit(self, token: str, kod: str = "") -> Optional[Mutabakat]:
         raise NotImplementedError
 
-    def sifre_dogru(self, token: str, girilen: str) -> bool:
+    def sifre_dogru(self, token: str, kod: str) -> bool:
         raise NotImplementedError
 
 
 class MockDataSource(BaseDataSource):
-    """Geliştirme için örnek veri. Şifre: 1234"""
+    """Geliştirme için örnek veri. Kod: 123456"""
 
-    SIFRE = "1234"
+    KOD = "123456"
 
-    def get_kayit(self, token: str) -> Optional[Mutabakat]:
+    def get_kayit(self, token: str, kod: str = "") -> Optional[Mutabakat]:
         return Mutabakat(
-            token=token, dokuman_id="00000016", cari_kod="00006968",
-            cari_adi="CNR DEMİR ÇELİK SANAYİ VE TİCARET ANONİM ŞİRKETİ",
-            mutabakat_tarihi="04.03.2026", konu="ONLİNE MUTABAKAT", firma_pb="TL",
+            token=token, dokuman_id="00000016", cari_kod="D01.02.0050",
+            cari_adi="D01.02.0050",
+            mutabakat_tarihi="01.07.2026 00:00:00", konu="Mutabakat mektubu",
+            firma_pb="TL",
             satirlar=[
-                MutabakatSatiri("Alacak", Decimal("163697.41"), "EUR", Decimal("8535863.55"), "TL"),
-                MutabakatSatiri("Borç", Decimal("79120.28"), "TL", Decimal("79120.28"), "TL"),
+                MutabakatSatiri("Borç", Decimal("5291530.17"), "TL", Decimal("5291530.17"), "TL"),
+                MutabakatSatiri("Alacak", Decimal("5656620.65"), "TL", Decimal("5656620.65"), "TL"),
             ],
-            toplam=Decimal("-8456743.27"),
-            vkn="5400382777",
-            donem_ay="Mayıs",
-            donem_yil="2026",
-            gonderilme_zamani="07.07.2026 11:59:32",
-            yetkili_adi="Muhasebe Muhasebe",
-            yetkili_unvani="MUHASEBE ŞEFİ",
-            email="muhasebe@ornekfirma.com",
-            tel="(352) 207 70 00",
-            fax="-",
-            mektup_url="",
-            ekstre_url="",
+            toplam=Decimal("-365090.48"),
+            donem_ay="Temmuz", donem_yil="2026",
+            email="muhasebe@ornekfirma.com.tr",
+            confirmcode="10058842", durum="0",
         )
 
-    def sifre_dogru(self, token: str, girilen: str) -> bool:
-        return girilen.strip() == self.SIFRE
+    def sifre_dogru(self, token: str, kod: str) -> bool:
+        return (kod or "").strip() == self.KOD
 
 
 class ErpDataSource(BaseDataSource):
-    """
-    Erecon (gerçek servis) veri kaynağı.
+    """Erecon (gerçek servis) veri kaynağı. GUID + doğrulama kodu ile çalışır."""
 
-    get_kayit(token): /erecon/list çağırır ve XML yanıtı Mutabakat'a çevirir.
-      NOT: /erecon/list İKİ parametre ister: GUID (link anahtarı) + cari kod.
-      Bizim URL'deki token = GUID. Cari kodun nereden geleceği İbrahim ekibiyle
-      netleşecek (linkte mi, yanıtta mı). Şimdilik token "guid" veya "guid|cari"
-      biçiminde çözülür.
-    """
-
-    def _guid_cari(self, token: str):
-        if "|" in token:
-            guid, cari = token.split("|", 1)
-            return guid.strip(), cari.strip()
-        return token.strip(), erecon._cfg("ERECON_DEFAULT_CARI", "")
-
-    def get_kayit(self, token: str) -> Optional[Mutabakat]:
-        guid, cari = self._guid_cari(token)
-        xml_text = erecon.erecon_list(guid, cari)
-        logger.info("Erecon /erecon/list yanıtı (parse için ham): %s", xml_text[:2000])
+    def get_kayit(self, token: str, kod: str = "") -> Optional[Mutabakat]:
+        xml_text = erecon.erecon_list(token, kod)
         return _parse_list_response(xml_text, token=token)
 
-    # Şifre doğrulama: Dokümanda müşteri şifresi için bir uç yok. Netleşene
-    # kadar geçici olarak mock şifre (1234) kullanılıyor.
-    SIFRE = "1234"
+    def sifre_dogru(self, token: str, kod: str) -> bool:
+        # list geçerli bir TMPCONF döndürüyorsa kod doğru; MESSAGETABLE(E) ise yanlış.
+        try:
+            return self.get_kayit(token, kod) is not None
+        except Exception:
+            logger.warning("Erecon kod doğrulama sırasında hata", exc_info=True)
+            return False
 
-    def sifre_dogru(self, token: str, girilen: str) -> bool:
-        return girilen.strip() == self.SIFRE
+
+# --------------------------------------------------------------------------- #
+# XML yardımcıları
+# --------------------------------------------------------------------------- #
+def _to_decimal(s) -> Optional[Decimal]:
+    if s is None:
+        return None
+    t = str(s).strip().replace(" ", "")
+    if not t:
+        return None
+    if "," in t and "." in t:
+        t = t.replace(".", "").replace(",", ".")
+    elif "," in t:
+        t = t.replace(",", ".")
+    try:
+        return Decimal(t)
+    except InvalidOperation:
+        return None
+
+
+def _messagetable(root) -> tuple[bool, str]:
+    """MESSAGETABLE kökünden (hata_var_mi, mesaj) döndürür."""
+    is_error = False
+    msgs = []
+    for row in root.iter("ROW"):
+        typ = (row.findtext("TYPE") or "").strip().upper()
+        msg = (row.findtext("SYSTEMMSG") or row.findtext("MESSAGE") or "").strip()
+        if typ == "E":
+            is_error = True
+        if msg:
+            msgs.append(msg)
+    return is_error, " ".join(msgs)
 
 
 def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
-    """
-    /erecon/list XML yanıtını Mutabakat nesnesine çevirir.
+    """/erecon/list yanıtını (TMPCONF) Mutabakat'a çevirir. Hata/boş -> None."""
+    logger.info("Erecon /erecon/list ham yanıt: %s", (xml_text or "")[:3000])
+    if not xml_text or not xml_text.strip():
+        return None
+    try:
+        root = ET.fromstring(xml_text.strip())
+    except ET.ParseError:
+        logger.error("Erecon /erecon/list yanıtı geçerli XML değil.")
+        return None
 
-    TODO: Gerçek yanıt şeması (etiket adları, satır yapısı) elimize ulaşınca
-    burası doldurulacak. Şu an yanıt örneği olmadığı için parse yapılamıyor.
-    """
-    raise NotImplementedError(
-        "Erecon /erecon/list yanıt şeması bekleniyor. Dev ortamdan bir örnek "
-        "yanıt alınınca bu fonksiyon yazılacak."
+    tag = root.tag.split("}")[-1].upper()
+    if tag == "MESSAGETABLE":
+        _, msg = _messagetable(root)
+        logger.warning("Erecon /erecon/list hata/doğrulama: %s", msg)
+        return None
+    if tag != "TMPCONF":
+        logger.warning("Erecon /erecon/list beklenmeyen kök etiketi: %s", tag)
+        return None
+
+    line = root.find(".//LINE")
+    if line is None:
+        return None
+
+    def g(name):
+        el = line.find(name)
+        return (el.text or "").strip() if (el is not None and el.text) else ""
+
+    finperiod = g("FINPERIOD")
+    m = Mutabakat(
+        token=token,
+        cari_kod=g("CUSTOMER"),
+        cari_adi=g("CUSTOMER"),          # yanıtta ayrı ünvan yok (İbrahim'e sorulacak)
+        mutabakat_tarihi=g("VALIDFROM"),
+        konu=g("STDTEXT") or "ONLİNE MUTABAKAT",
+        firma_pb=g("CURRENCY") or "TL",
+        email=g("MAILADR"),
+        donem_yil=g("FINYEAR"),
+        donem_ay=_AYLAR.get(finperiod.zfill(2), finperiod),
+        confirmcode=g("CONFIRMCODE"),
+        durum=g("ERECONSTATUS"),
+        sfile_b64=g("SFILE"),
+        tfile_b64=g("TFILE"),
     )
+    m.toplam = _to_decimal(g("BALANCE")) or Decimal("0")
+
+    # BALANCEHTML: gömülü JSON -> Borç / Alacak satırları
+    bh = g("BALANCEHTML")
+    if bh:
+        try:
+            for r in json.loads(bh):
+                pb = r.get("CURRENCY", m.firma_pb)
+                borc = _to_decimal(r.get("DOVIZ_BORC")) or Decimal("0")
+                alacak = _to_decimal(r.get("DOVIZ_ALACAK")) or Decimal("0")
+                tl_borc = _to_decimal(r.get("TL_BORC")) or borc
+                tl_alacak = _to_decimal(r.get("TL_ALACAK")) or alacak
+                m.satirlar.append(MutabakatSatiri("Borç", borc, pb, tl_borc, "TL"))
+                m.satirlar.append(MutabakatSatiri("Alacak", alacak, pb, tl_alacak, "TL"))
+                if r.get("ACCOUNT") and not m.cari_kod:
+                    m.cari_kod = m.cari_adi = r["ACCOUNT"]
+        except Exception:
+            logger.warning("BALANCEHTML JSON parse edilemedi: %s", bh[:200], exc_info=True)
+
+    # Dosyalar mevcutsa indirme linkleri (base64 view üzerinden servis edilir)
+    if m.sfile_b64:
+        m.mektup_url = f"/{token}/mektup/"
+    if m.tfile_b64:
+        m.ekstre_url = f"/{token}/ekstre/"
+
+    return m
 
 
+def _parse_update_response(xml_text: str) -> tuple[bool, str]:
+    """/erecon/update (MESSAGETABLE) yanıtını (ok, mesaj) olarak döndürür."""
+    if not xml_text or not xml_text.strip():
+        return True, ""
+    try:
+        root = ET.fromstring(xml_text.strip())
+    except ET.ParseError:
+        logger.error("Erecon /erecon/update yanıtı geçerli XML değil: %s", xml_text[:300])
+        return False, "Servis yanıtı okunamadı."
+    if root.tag.split("}")[-1].upper() == "MESSAGETABLE":
+        is_error, msg = _messagetable(root)
+        return (not is_error), msg
+    return True, ""
+
+
+# --------------------------------------------------------------------------- #
+# Dış arayüz
+# --------------------------------------------------------------------------- #
 def get_data_source() -> BaseDataSource:
     kaynak = getattr(settings, "MUTABAKAT_DATA_SOURCE", "mock").lower()
     if kaynak == "erp":
@@ -154,40 +256,34 @@ def get_data_source() -> BaseDataSource:
     return MockDataSource()
 
 
-def get_kayit(token: str) -> Optional[Mutabakat]:
-    return get_data_source().get_kayit(token)
+def get_kayit(token: str, kod: str = "") -> Optional[Mutabakat]:
+    return get_data_source().get_kayit(token, kod)
 
 
-def sifre_dogru(token: str, girilen: str) -> bool:
-    return get_data_source().sifre_dogru(token, girilen)
+def sifre_dogru(token: str, kod: str) -> bool:
+    return get_data_source().sifre_dogru(token, kod)
 
 
-def gonder_cevap(token, mutabakat, karar, mesaj="", ad_soyad="", dosya=None):
+def gonder_cevap(token, mutabakat, karar, mesaj="", ad_soyad="", dosya=None, kod=""):
     """
-    Müşterinin kararını (Mutabıkız / İtiraz) işler.
-
-    - "mock" modunda: yalnızca log'a yazar (yerelde saklanmaz).
-    - "erp" modunda: Erecon /erecon/update'e iletir.
-      PARAM sırası: guid, cari, karar_kodu, dosya(base64), ad_soyad, mesaj.
+    Müşteri kararını işler ve (ok, mesaj) döndürür.
+      - "mock": log'a yazar, (True, "") döner.
+      - "erp" : /erecon/update -> PARAM: guid, kod, karar_kodu, dosya(b64), ad, mesaj.
     """
     kaynak = getattr(settings, "MUTABAKAT_DATA_SOURCE", "mock").lower()
 
     if kaynak == "erp":
-        guid = getattr(mutabakat, "token", token) or token
-        cari = getattr(mutabakat, "cari_kod", "")
         karar_kodu = KARAR_KODU.get(karar, karar)
         dosya_b64 = erecon.dosya_to_base64(dosya)
         sonuc = erecon.erecon_update(
-            guid=guid, cari=cari, karar_kodu=karar_kodu,
+            guid=token, kod=kod, karar_kodu=karar_kodu,
             dosya_b64=dosya_b64, ad_soyad=ad_soyad, mesaj=mesaj,
         )
         logger.info("Erecon /erecon/update sonucu: %s", (sonuc or "")[:500])
-        return sonuc
+        return _parse_update_response(sonuc)
 
     logger.info(
-        "Mutabakat kararı alındı (mock) | token=%s cari=%s karar=%s ad_soyad=%s "
-        "mesaj=%r dosya=%s",
-        token, getattr(mutabakat, "cari_kod", ""), karar, ad_soyad, mesaj,
-        getattr(dosya, "name", None),
+        "Mutabakat kararı alındı (mock) | token=%s karar=%s ad_soyad=%s mesaj=%r dosya=%s",
+        token, karar, ad_soyad, mesaj, getattr(dosya, "name", None),
     )
-    return None
+    return True, ""

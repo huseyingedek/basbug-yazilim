@@ -35,7 +35,7 @@
             <img src="{% static 'img/basbug_logo.png' %}" alt="Başbuğ" class="login-mobilelogo">
             <span class="login-eyebrow">Güvenli Giriş</span>
             <h2>Mutabakat Ekranı</h2>
-            <p class="sub">Devam etmek için e-postanızda tarafınıza iletilen şifreyi giriniz.</p>
+            <p class="sub">Devam etmek için e-postanızda tarafınıza iletilen 6 haneli kodu giriniz.</p>
 
             {% if messages %}
                 {% for message in messages %}
@@ -49,7 +49,7 @@
             <form method="post" novalidate>
                 {% csrf_token %}
                 <div class="field">
-                    <label for="{{ form.sifre.id_for_label }}">Şifre</label>
+                    <label for="{{ form.sifre.id_for_label }}">Doğrulama Kodu</label>
                     {{ form.sifre }}
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">
@@ -60,7 +60,7 @@
 
             <div class="login-secure">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <span>Şifreniz yalnızca size özeldir, gizli tutunuz.</span>
+                <span>Kodunuz yalnızca size özeldir, gizli tutunuz.</span>
             </div>
         </div>
     </div>
