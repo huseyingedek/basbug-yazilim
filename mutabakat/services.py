@@ -97,8 +97,7 @@ class MockDataSource(BaseDataSource):
             mutabakat_tarihi="01.07.2026 00:00:00", konu="Mutabakat mektubu",
             firma_pb="TL",
             satirlar=[
-                MutabakatSatiri("Borç", Decimal("5291530.17"), "TL", Decimal("5291530.17"), "TL"),
-                MutabakatSatiri("Alacak", Decimal("5656620.65"), "TL", Decimal("5656620.65"), "TL"),
+                MutabakatSatiri("Alacak", Decimal("365090.48"), "TL", Decimal("365090.48"), "TL"),
             ],
             toplam=Decimal("-365090.48"),
             donem_ay="Temmuz", donem_yil="2026",
@@ -210,18 +209,21 @@ def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
     )
     m.toplam = _to_decimal(g("BALANCE")) or Decimal("0")
 
-    # BALANCEHTML: gömülü JSON -> Borç / Alacak satırları
+    # BALANCEHTML: her para birimi için TEK satır -> BAKİYE (borç/alacak sign'a göre)
     bh = g("BALANCEHTML")
     if bh:
         try:
             for r in json.loads(bh):
                 pb = r.get("CURRENCY", m.firma_pb)
-                borc = _to_decimal(r.get("DOVIZ_BORC")) or Decimal("0")
-                alacak = _to_decimal(r.get("DOVIZ_ALACAK")) or Decimal("0")
-                tl_borc = _to_decimal(r.get("TL_BORC")) or borc
-                tl_alacak = _to_decimal(r.get("TL_ALACAK")) or alacak
-                m.satirlar.append(MutabakatSatiri("Borç", borc, pb, tl_borc, "TL"))
-                m.satirlar.append(MutabakatSatiri("Alacak", alacak, pb, tl_alacak, "TL"))
+                dov_bakiye = _to_decimal(r.get("DOVIZ_BAKIYE")) or Decimal("0")
+                tl_bakiye = _to_decimal(r.get("TL_BAKIYE"))
+                if tl_bakiye is None:
+                    tl_bakiye = dov_bakiye
+                # Bakiye = Borç - Alacak: negatif -> Alacak, pozitif -> Borç
+                ba = "Alacak" if dov_bakiye < 0 else "Borç"
+                m.satirlar.append(
+                    MutabakatSatiri(ba, abs(dov_bakiye), pb, abs(tl_bakiye), "TL")
+                )
                 if r.get("ACCOUNT") and not m.cari_kod:
                     m.cari_kod = m.cari_adi = r["ACCOUNT"]
         except Exception:
