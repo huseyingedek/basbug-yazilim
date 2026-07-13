@@ -42,8 +42,8 @@ print("\n=== 2) LIST denemesi (token ile) ===")
 xml_body = (
     '<?xml version="1.0" encoding="UTF-8"?>\n'
     "<PARAMETERS>\n"
-    "  <PARAM>950c9b4e-e492-430b-ae39-be53b69a8002</PARAM>\n"
-    "  <PARAM>00194109</PARAM>\n"
+    "  <PARAM>53171c64-b9e5-498e-a9b7-cb422c0d9680</PARAM>\n"
+    "  <PARAM>20925837</PARAM>\n"
     "</PARAMETERS>"
 ).encode("utf-8")
 

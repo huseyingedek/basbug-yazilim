@@ -196,7 +196,7 @@ def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
     m = Mutabakat(
         token=token,
         cari_kod=g("CUSTOMER"),
-        cari_adi=g("CUSTOMER"),          # yanıtta ayrı ünvan yok (İbrahim'e sorulacak)
+        cari_adi=g("CUSTNAME") or g("CUSTOMER"),   # ünvan: CUSTNAME (yoksa koda düş)
         mutabakat_tarihi=g("VALIDFROM"),
         konu=g("STDTEXT") or "ONLİNE MUTABAKAT",
         firma_pb=g("CURRENCY") or "TL",
