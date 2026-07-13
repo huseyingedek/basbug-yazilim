@@ -35,13 +35,8 @@
             <img src="{% static 'img/basbug_logo.png' %}" alt="Başbuğ" class="login-mobilelogo">
             <span class="login-eyebrow">Güvenli Giriş</span>
             <h2>Mutabakat Ekranı</h2>
-            <p class="sub">Devam etmek için e-postanızda tarafınıza iletilen 6 haneli kodu giriniz.</p>
+            <p class="sub">Devam etmek için e-postanızda tarafınıza iletilen 8 haneli kodu giriniz.</p>
 
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
             {% if hata %}
                 <div class="alert alert-error">{{ hata }}</div>
             {% endif %}

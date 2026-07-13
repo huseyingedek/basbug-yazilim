@@ -86,7 +86,7 @@ def cevap(request, token):
         return render(request, "mutabakat/detay.html",
                       {"m": m, "form": form, "token": token})
 
-    ok, mesaj = gonder_cevap(
+    ok, mesaj, tip = gonder_cevap(
         token=token,
         mutabakat=m,
         kod=kod,
@@ -97,19 +97,19 @@ def cevap(request, token):
     )
 
     if not ok:
-        # Servis kararı işleyemedi: detayda kal, hatayı göster.
+        # Servis hatası (TYPE=E): detayda kal, hatayı kırmızı göster.
         messages.error(request, mesaj or "Kararınız işlenemedi. Lütfen tekrar deneyiniz.")
         return render(request, "mutabakat/detay.html",
                       {"m": m, "form": CevapForm(), "token": token})
 
-    # Başarılı: oturumu kapat ve girişe dön; bilgilendirme mesajı göster
-    request.session.pop(_ok_key(token), None)
-    request.session.pop(_kod_key(token), None)
-    if form.cleaned_data["karar"] == "itiraz":
+    # ok=True (TYPE!=E): sonucu YEŞİL olarak DETAYDA göster (login'de mesaj yok).
+    if mesaj:
+        messages.success(request, mesaj)
+    elif form.cleaned_data["karar"] == "itiraz":
         messages.success(request, "İtiraz bildiriminiz alınmıştır. Teşekkür ederiz.")
     else:
         messages.success(request, "Mutabakat onayınız alınmıştır. Teşekkür ederiz.")
-    return redirect("mutabakat:giris", token=token)
+    return redirect("mutabakat:detay", token=token)
 
 
 # --------------------------------------------------------------------------- #

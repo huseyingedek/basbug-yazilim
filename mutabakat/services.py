@@ -145,18 +145,23 @@ def _to_decimal(s) -> Optional[Decimal]:
         return None
 
 
-def _messagetable(root) -> tuple[bool, str]:
-    """MESSAGETABLE kökünden (hata_var_mi, mesaj) döndürür."""
-    is_error = False
+# TYPE oncelik: E(hata) > W(uyari) > I(bilgi) > S(basari)
+_TIP_ONCELIK = {"E": 3, "W": 2, "I": 1, "S": 0}
+
+
+def _messagetable(root) -> tuple[str, str]:
+    """MESSAGETABLE kökünden (tip, mesaj) döndürür. tip: E/W/I/S (en agir)."""
+    tips = []
     msgs = []
     for row in root.iter("ROW"):
         typ = (row.findtext("TYPE") or "").strip().upper()
         msg = (row.findtext("SYSTEMMSG") or row.findtext("MESSAGE") or "").strip()
-        if typ == "E":
-            is_error = True
+        if typ:
+            tips.append(typ)
         if msg:
             msgs.append(msg)
-    return is_error, " ".join(msgs)
+    tip = max(tips, key=lambda t: _TIP_ONCELIK.get(t, 0)) if tips else "S"
+    return tip, " ".join(msgs)
 
 
 def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
@@ -231,19 +236,19 @@ def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
     return m
 
 
-def _parse_update_response(xml_text: str) -> tuple[bool, str]:
-    """/erecon/update (MESSAGETABLE) yanıtını (ok, mesaj) olarak döndürür."""
+def _parse_update_response(xml_text: str) -> tuple[bool, str, str]:
+    """/erecon/update yanıtını (ok, mesaj, tip) döndürür. tip: E/W/I/S."""
     if not xml_text or not xml_text.strip():
-        return True, ""
+        return True, "", "S"
     try:
         root = ET.fromstring(xml_text.strip())
     except ET.ParseError:
         logger.error("Erecon /erecon/update yanıtı geçerli XML değil: %s", xml_text[:300])
-        return False, "Servis yanıtı okunamadı."
+        return False, "Servis yanıtı okunamadı.", "E"
     if root.tag.split("}")[-1].upper() == "MESSAGETABLE":
-        is_error, msg = _messagetable(root)
-        return (not is_error), msg
-    return True, ""
+        tip, msg = _messagetable(root)
+        return (tip != "E"), msg, tip
+    return True, "", "S"
 
 
 # --------------------------------------------------------------------------- #
@@ -280,10 +285,10 @@ def gonder_cevap(token, mutabakat, karar, mesaj="", ad_soyad="", dosya=None, kod
             dosya_b64=dosya_b64, ad_soyad=ad_soyad, mesaj=mesaj,
         )
         logger.info("Erecon /erecon/update sonucu: %s", (sonuc or "")[:500])
-        return _parse_update_response(sonuc)
+        return _parse_update_response(sonuc)  # (ok, mesaj, tip)
 
     logger.info(
         "Mutabakat kararı alındı (mock) | token=%s karar=%s ad_soyad=%s mesaj=%r dosya=%s",
         token, karar, ad_soyad, mesaj, getattr(dosya, "name", None),
     )
-    return True, ""
+    return True, "", "S"
