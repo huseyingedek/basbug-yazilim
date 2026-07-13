@@ -113,9 +113,40 @@ def cevap(request, token):
 
 
 # --------------------------------------------------------------------------- #
-# Dosya indirme: Mutabakat Mektubu (SFILE) / Ekstre (TFILE) — base64 -> PDF
+# Dosya indirme: Mutabakat Mektubu (SFILE) / Ekstre (TFILE)
+# ERP dosyayı base64 içinde gönderir; PDF veya PNG olabilir.
 # --------------------------------------------------------------------------- #
-def _dosya_indir(request, token, alan, dosya_adi):
+def _pdf_onar(raw: bytes) -> bytes:
+    """
+    ERP, dosyayı base64'lemeden önce ikili veriyi ISO-8859-9 metin gibi okuyup
+    UTF-8'e çevirerek bozabiliyor (mojibake): 0x9C -> 0xC2 0x9C gibi. Ham ikili
+    veri geçerli UTF-8 OLMAZ; eğer bytes UTF-8'e çözülebiliyorsa bozulmuştur,
+    ISO-8859-9'a geri kodlayarak orijinali kurtarırız. Zaten temizse (ham ikili)
+    UTF-8 decode hata verir, dokunmadan döneriz. PNG gibi temiz gelen dosyalara
+    dokunmaz.
+    """
+    try:
+        s = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw  # zaten temiz ikili
+    try:
+        return s.encode("iso-8859-9")
+    except UnicodeEncodeError:
+        return raw
+
+
+def _icerik_tipi(raw: bytes):
+    """Sihirli baytlara göre (content_type, uzanti) döndürür."""
+    if raw[:4] == b"%PDF":
+        return "application/pdf", "pdf"
+    if raw[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png", "png"
+    if raw[:3] == b"\xff\xd8\xff":
+        return "image/jpeg", "jpg"
+    return "application/octet-stream", "bin"
+
+
+def _dosya_indir(request, token, alan, taban_ad):
     token = str(token)
     if not _girisli_mi(request, token):
         return redirect("mutabakat:giris", token=token)
@@ -125,17 +156,19 @@ def _dosya_indir(request, token, alan, dosya_adi):
     if not b64:
         raise Http404("Dosya bulunamadı.")
     try:
-        icerik = base64.b64decode(b64)
+        icerik = _pdf_onar(base64.b64decode(b64))
     except Exception:
         raise Http404("Dosya çözümlenemedi.")
-    resp = HttpResponse(icerik, content_type="application/pdf")
-    resp["Content-Disposition"] = f'inline; filename="{dosya_adi}"'
+    ctype, uzanti = _icerik_tipi(icerik)
+    ad = f"{taban_ad}.{uzanti}"
+    resp = HttpResponse(icerik, content_type=ctype)
+    resp["Content-Disposition"] = f'inline; filename="{ad}"'
     return resp
 
 
 def mektup(request, token):
-    return _dosya_indir(request, token, "sfile_b64", "mutabakat-mektubu.pdf")
+    return _dosya_indir(request, token, "sfile_b64", "mutabakat-mektubu")
 
 
 def ekstre(request, token):
-    return _dosya_indir(request, token, "tfile_b64", "ekstre.pdf")
+    return _dosya_indir(request, token, "tfile_b64", "ekstre")

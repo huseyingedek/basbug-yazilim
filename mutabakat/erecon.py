@@ -154,18 +154,52 @@ def _mw(path: str) -> str:
     return _cfg("ERECON_MW_BASE").rstrip("/") + path
 
 
+def _maybe_b64_decode(text: str) -> str:
+    """
+    Erecon büyük yanıtları (SFILE'lı) Kong üzerinden geçebilmek için tüm gövdeyi
+    base64 olarak döndürüyor. Gövde XML değil de base64 ise çözer; zaten XML ise
+    olduğu gibi bırakır.
+    """
+    s = (text or "").strip()
+    if not s or s.startswith("<"):
+        return text  # zaten düz XML
+    try:
+        decoded = base64.b64decode(s, validate=True).decode("utf-8")
+    except Exception:
+        return text  # base64 değil, dokunma
+    return decoded if "<" in decoded else text
+
+
+def _return_or_raise(r) -> str:
+    """
+    Erecon anlamlı hatalarını 400 statüsüyle birlikte MESSAGETABLE gövdesinde
+    döndürür (ör. geçersiz kod/kayıt). Gövde XML ise onu döndür ki üst katman
+    MESSAGETABLE'ı 'kod hatalı' olarak işleyebilsin. Sadece gerçekten
+    beklenmedik durumlarda (boş gövde / 5xx) hata fırlat.
+    Not: Yanıt base64 gelirse (büyük SFILE'lı kayıtlar) önce çözülür.
+    """
+    text = _maybe_b64_decode(r.text or "")
+    logger.info("Erecon yanıt: status=%s body=%s", r.status_code, text[:800])
+    if r.ok:
+        return text
+    if r.status_code < 500 and ("<MESSAGETABLE" in text or "<TMPCONF" in text):
+        # İş kuralı hatası: gövdeyi olduğu gibi ver, parser ele alsın.
+        return text
+    r.raise_for_status()
+    return text
+
+
 def erecon_list(guid: str, kod: str) -> str:
     """
     Mutabakat kaydını çeker.
     Gövde: <PARAMETERS><PARAM>{guid}</PARAM><PARAM>{kod}</PARAM></PARAMETERS>
-      PARAM1 = GUID (link anahtarı), PARAM2 = 6 haneli doğrulama kodu.
+      PARAM1 = GUID (link anahtarı), PARAM2 = doğrulama kodu.
     Dönen: XML metin (services.py'de Mutabakat'a parse edilir).
     """
     body = _xml(guid, kod).encode("utf-8")
     # Doküman GET diyor ama gövdeyle; requests GET+data destekler.
-    r = requests.request("GET", _mw("/erecon/list"), data=body, headers=_headers(), timeout=30)
-    r.raise_for_status()
-    return r.text
+    r = requests.request("GET", _mw("/erecon/list"), data=body, headers=_headers(), timeout=120)
+    return _return_or_raise(r)
 
 
 def erecon_update(guid: str, kod: str, karar_kodu, dosya_b64: str = "",
@@ -175,9 +209,8 @@ def erecon_update(guid: str, kod: str, karar_kodu, dosya_b64: str = "",
       1) guid  2) kod  3) karar kodu  4) dosya(base64)  5) ad soyad  6) mesaj
     """
     body = _xml(guid, kod, karar_kodu, dosya_b64 or "", ad_soyad or "", mesaj or "").encode("utf-8")
-    r = requests.post(_mw("/erecon/update"), data=body, headers=_headers(), timeout=30)
-    r.raise_for_status()
-    return r.text
+    r = requests.post(_mw("/erecon/update"), data=body, headers=_headers(), timeout=120)
+    return _return_or_raise(r)
 
 
 def dosya_to_base64(dosya) -> str:

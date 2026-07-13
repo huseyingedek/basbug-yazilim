@@ -7,6 +7,13 @@
 
 {% block content %}
 <section class="doc">
+    {% if messages %}
+    <div class="doc-messages">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
     <!-- Kurumsal marka bandı -->
     <div class="doc-brand">
         <div>
@@ -14,7 +21,6 @@
             <h1>Cari Hesap Mutabakatı</h1>
         </div>
         <div class="doc-brand-meta">
-            <div><span>Doküman No</span><strong>{{ m.dokuman_id }}</strong></div>
             <div><span>Tarih</span><strong>{{ m.mutabakat_tarihi }}</strong></div>
         </div>
     </div>
@@ -29,8 +35,16 @@
         <div class="info-grid">
             <div class="info-item"><span>Cari Kod</span><strong>{{ m.cari_kod }}</strong></div>
             <div class="info-item"><span>Cari Adı</span><strong>{{ m.cari_adi }}</strong></div>
-            <div class="info-item"><span>Doküman ID</span><strong>{{ m.dokuman_id }}</strong></div>
             <div class="info-item"><span>Firma Para Birimi</span><strong>{{ m.firma_pb }}</strong></div>
+            {% if m.mektup_url or m.ekstre_url %}
+            <div class="info-item info-item--files">
+                <span>Belgeler</span>
+                <div class="doc-files">
+                    {% if m.mektup_url %}<a class="btn btn-outline btn-sm" href="{{ m.mektup_url }}" target="_blank" rel="noopener">Mutabakat Mektubu</a>{% endif %}
+                    {% if m.ekstre_url %}<a class="btn btn-outline btn-sm" href="{{ m.ekstre_url }}" target="_blank" rel="noopener">Ekstre Dosyası</a>{% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         {% if m.vkn or m.yetkili_adi or m.donem_ay or m.gonderilme_zamani %}
@@ -44,12 +58,6 @@
         </div>
         {% endif %}
 
-        {% if m.mektup_url or m.ekstre_url %}
-        <div class="doc-files">
-            {% if m.mektup_url %}<a class="btn btn-outline" href="{{ m.mektup_url }}" target="_blank" rel="noopener">Mutabakat Mektubu</a>{% endif %}
-            {% if m.ekstre_url %}<a class="btn btn-outline" href="{{ m.ekstre_url }}" target="_blank" rel="noopener">Ekstre Dosyası</a>{% endif %}
-        </div>
-        {% endif %}
 
         <div class="balance-callout">
             <div>
@@ -171,3 +179,4 @@
 {% block scripts %}
 <script src="{% static 'js/app.js' %}"></script>
 {% endblock %}
+                    
