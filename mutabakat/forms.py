@@ -2,7 +2,7 @@ from django import forms
 
 
 class SifreForm(forms.Form):
-    """E-posta ile gelen 6 haneli doğrulama kodu."""
+    """E-posta ile gelen 8 haneli doğrulama kodu."""
 
     sifre = forms.CharField(
         label="Doğrulama Kodu",
