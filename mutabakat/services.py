@@ -29,8 +29,8 @@ from . import erecon
 
 logger = logging.getLogger(__name__)
 
-# Karar kodları (Erecon /erecon/update 3. PARAM). 1=onay, 0=itiraz.
-KARAR_KODU = {"mutabik": "1", "itiraz": "0"}
+# Karar kodları (Erecon /erecon/update 3. PARAM). 1=onay, 2=itiraz.
+KARAR_KODU = {"mutabik": "1", "itiraz": "2"}
 
 # FINPERIOD (dönem no) -> ay adı
 _AYLAR = {
