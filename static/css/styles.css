@@ -87,6 +87,32 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -.02em; }
 .site-footer .container { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .footer-sep { opacity: .5; }
 
+/* ---------- Grup markaları şeridi (karşılama sayfası) ---------- */
+.partner-strip {
+    background: var(--paper); border-top: 1px solid var(--line);
+    padding: 26px 0 30px;
+}
+.partner-strip .container { text-align: center; }
+.partner-strip-title {
+    display: block; font-size: 11px; font-weight: 600; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 20px;
+}
+.partner-logos {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+    gap: 34px 48px;
+}
+.partner-logos img {
+    height: 62px; width: auto; object-fit: contain;
+    filter: grayscale(100%); opacity: .72;
+    transition: filter .2s ease, opacity .2s ease;
+}
+.partner-logos img:hover { filter: grayscale(0); opacity: 1; }
+
+@media (max-width: 560px) {
+    .partner-logos { gap: 22px 30px; }
+    .partner-logos img { height: 44px; }
+}
+
 /* ---------- Alerts ---------- */
 .alert { padding: 12px 15px; border-radius: var(--r-sm); margin-bottom: 18px; font-size: 13.5px; font-weight: 500; }
 .alert-error { background: var(--no-tint); color: var(--no); border: 1px solid #f1c4c0; }
