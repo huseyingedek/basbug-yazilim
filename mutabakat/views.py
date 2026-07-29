@@ -5,7 +5,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 
 from .forms import CevapForm, SifreForm
-from .services import get_kayit, gonder_cevap, sifre_dogru
+from .services import firma_logo_b64, get_kayit, gonder_cevap, sifre_dogru
 
 
 def _ok_key(token):
@@ -163,6 +163,28 @@ def _dosya_indir(request, token, alan, taban_ad):
     ad = f"{taban_ad}.{uzanti}"
     resp = HttpResponse(icerik, content_type=ctype)
     resp["Content-Disposition"] = f'inline; filename="{ad}"'
+    return resp
+
+
+def firma_logo(request, token):
+    """
+    Mutabakatın gönderildiği firmanın logosunu (EReconCompanyPict) görsel olarak
+    servis eder. Logo yoksa 404 -> şablon varsayılan görünüme düşer.
+    """
+    token = str(token)
+    if not _girisli_mi(request, token):
+        return redirect("mutabakat:giris", token=token)
+    b64 = firma_logo_b64(token)
+    if not b64:
+        raise Http404("Firma logosu bulunamadı.")
+    try:
+        icerik = _pdf_onar(base64.b64decode(b64))
+    except Exception:
+        raise Http404("Firma logosu çözümlenemedi.")
+    ctype, uzanti = _icerik_tipi(icerik)
+    resp = HttpResponse(icerik, content_type=ctype)
+    resp["Content-Disposition"] = f'inline; filename="firma-logo.{uzanti}"'
+    resp["Cache-Control"] = "private, max-age=300"
     return resp
 
 

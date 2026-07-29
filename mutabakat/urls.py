@@ -10,6 +10,7 @@ urlpatterns = [
     path("<uuid:token>/", views.giris, name="giris"),
     path("<uuid:token>/detay/", views.detay, name="detay"),
     path("<uuid:token>/cevap/", views.cevap, name="cevap"),
+    path("<uuid:token>/logo/", views.firma_logo, name="logo"),
     path("<uuid:token>/mektup/", views.mektup, name="mektup"),
     path("<uuid:token>/ekstre/", views.ekstre, name="ekstre"),
 ]

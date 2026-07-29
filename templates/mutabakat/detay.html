@@ -16,9 +16,15 @@
     {% endif %}
     <!-- Kurumsal marka bandı -->
     <div class="doc-brand">
-        <div>
-            <span class="doc-brand-kicker">{{ m.konu }}</span>
-            <h1>Cari Hesap Mutabakatı</h1>
+        <div class="doc-brand-main">
+            <img class="doc-brand-logo" src="{% url 'mutabakat:logo' token=token %}"
+                 alt="{{ m.cari_adi }}"
+                 onerror="this.onerror=null;this.src='{% static 'img/basbug_logo.png' %}';">
+            <span class="doc-brand-sep"></span>
+            <div>
+                <span class="doc-brand-kicker">{{ m.konu }}</span>
+                <h1>Cari Hesap Mutabakatı</h1>
+            </div>
         </div>
         <div class="doc-brand-meta">
             <div><span>Tarih</span><strong>{{ m.mutabakat_tarihi }}</strong></div>

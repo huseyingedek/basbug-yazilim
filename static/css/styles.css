@@ -245,9 +245,9 @@ textarea.form-input { resize: vertical; min-height: 104px; line-height: 1.5; }
 }
 .doc-brand::before { display: none; }
 .doc-brand > * { position: relative; z-index: 1; }
-.doc-brand-main { display: flex; align-items: center; gap: 20px; }
-.doc-brand-logo { height: 54px; width: auto; }
-.doc-brand-sep { width: 1px; height: 46px; background: rgba(255,255,255,.16); }
+.doc-brand-main { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.doc-brand-logo { height: auto; width: auto; max-height: 52px; max-width: 190px; object-fit: contain; display: block; }
+.doc-brand-sep { flex: none; width: 1px; height: 46px; background: var(--line-2); }
 .doc-brand-kicker { color: var(--red); font-weight: 700; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
 .doc-brand h1 { margin: 6px 0 0; font-size: 23px; color: var(--ink-900); font-weight: 800; }
 .doc-brand-meta { display: flex; gap: 12px; }

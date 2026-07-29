@@ -213,6 +213,26 @@ def erecon_update(guid: str, kod: str, karar_kodu, dosya_b64: str = "",
     return _return_or_raise(r)
 
 
+def erecon_company_pict(guid: str) -> str:
+    """
+    EReconCompanyPict: mutabakatın gönderildiği firmanın logo görselini getirir.
+    Gövde: <PARAMETERS><PARAM>{guid}</PARAM></PARAMETERS>  (PARAM = UKEY / GUID)
+    Dönen: base64 metin (görsel). Bulunamazsa boş string.
+
+    Not: Servis yolu varsayılan "/erecon/companypict"tir; kesin path İbrahim'den
+    teyit edilip farklıysa .env'e ERECON_PICT_PATH=/erecon/... eklenerek değişir.
+    """
+    body = _xml(guid).encode("utf-8")
+    path = _cfg("ERECON_PICT_PATH", "/erecon/companypict")
+    r = requests.request("GET", _mw(path), data=body, headers=_headers(), timeout=60)
+    text = _return_or_raise(r) or ""
+    s = text.strip()
+    # Hata gövdesi (XML) döndüyse logo yok say.
+    if s.startswith("<"):
+        return ""
+    return s
+
+
 def dosya_to_base64(dosya) -> str:
     """Django UploadedFile -> base64 metin. Dosya yoksa boş string."""
     if not dosya:
