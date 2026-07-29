@@ -14,7 +14,7 @@
     <header class="site-header">
         <div class="container header-inner">
             <a href="{% url 'mutabakat:index' %}" class="brand">
-                <img src="{% static 'img/basbug_logo.png' %}" alt="Başbuğ" class="brand-logo">
+                {% block brand_logo %}<img src="{% static 'img/basbug_logo.png' %}" alt="Başbuğ" class="brand-logo">{% endblock %}
                 <span class="brand-divider"></span>
                 <span class="brand-sub">E-Mutabakat</span>
             </a>

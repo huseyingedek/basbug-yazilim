@@ -5,6 +5,10 @@
 {% block title %}Mutabakat Detayı — Başbuğ E-Mutabakat{% endblock %}
 {% block body_class %}page-detay{% endblock %}
 
+{% comment %} Header logosu: mutabakatın gönderildiği firmanın logosu; gelmezse Başbuğ. {% endcomment %}
+{% block brand_logo %}<img src="{% url 'mutabakat:logo' token=token %}" alt="{{ m.cari_adi }}" class="brand-logo brand-logo--plate"
+     onerror="this.onerror=null;this.classList.remove('brand-logo--plate');this.src='{% static 'img/basbug_logo.png' %}';">{% endblock %}
+
 {% block content %}
 <section class="doc">
     {% if messages %}
@@ -16,15 +20,9 @@
     {% endif %}
     <!-- Kurumsal marka bandı -->
     <div class="doc-brand">
-        <div class="doc-brand-main">
-            <img class="doc-brand-logo" src="{% url 'mutabakat:logo' token=token %}"
-                 alt="{{ m.cari_adi }}"
-                 onerror="this.onerror=null;this.src='{% static 'img/basbug_logo.png' %}';">
-            <span class="doc-brand-sep"></span>
-            <div>
-                <span class="doc-brand-kicker">{{ m.konu }}</span>
-                <h1>Cari Hesap Mutabakatı</h1>
-            </div>
+        <div>
+            <span class="doc-brand-kicker">{{ m.konu }}</span>
+            <h1>Cari Hesap Mutabakatı</h1>
         </div>
         <div class="doc-brand-meta">
             <div><span>Tarih</span><strong>{{ m.mutabakat_tarihi }}</strong></div>

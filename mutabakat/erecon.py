@@ -225,10 +225,14 @@ def erecon_company_pict(guid: str) -> str:
     body = _xml(guid).encode("utf-8")
     path = _cfg("ERECON_PICT_PATH", "/erecon/companypict")
     r = requests.request("GET", _mw(path), data=body, headers=_headers(), timeout=60)
-    text = _return_or_raise(r) or ""
-    s = text.strip()
-    # Hata gövdesi (XML) döndüyse logo yok say.
-    if s.startswith("<"):
+    # ÖNEMLİ: Burada _return_or_raise/_maybe_b64_decode KULLANMA. O fonksiyon XML
+    # yanıtları için; görselin ikili verisinde '<' olabildiği için base64'ü erkenden
+    # çözüp bozuyor. Ham base64'ü olduğu gibi döndür; view base64decode + _pdf_onar
+    # (ERP mojibake onarımı) ile görseli kurtarır (mektup/ekstre ile aynı yol).
+    s = (r.text or "").strip()
+    logger.info("EReconCompanyPict: status=%s ham_uzunluk=%s", r.status_code, len(s))
+    if not r.ok or not s or s.startswith("<"):
+        # Hata (MESSAGETABLE) / boş gövde / logosuz kayıt -> logo yok.
         return ""
     return s
 
