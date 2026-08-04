@@ -1,0 +1,11 @@
+Grup markaları logoları — bu klasöre şu adlarla kaydedin (PNG, şeffaf zemin):
+
+  basbug-group.png   <-  https://basbug.com.tr/assets/img/intro_basbug_group_logo.png
+  basbug-oto.png     <-  https://basbug.com.tr/assets/img/basbug-oto-sticky-logo.png
+  bsg.png            <-  https://basbug.com.tr/assets/img/bsg.png
+  asel.png           <-  https://basbug.com.tr/assets/img/Asel_1.png
+  nev.png            <-  https://basbug.com.tr/assets/img/4_logo.png
+  nerex.png          <-  https://basbug.com.tr/assets/img/nerenx.png
+  goodyear.png       <-  https://basbug.com.tr/assets/img/gdy_transparent.png
+
+Kaydettikten sonra sunucuda: python manage.py collectstatic --noinput

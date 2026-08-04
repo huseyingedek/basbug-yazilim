@@ -128,6 +128,17 @@ class ErpDataSource(BaseDataSource):
 # --------------------------------------------------------------------------- #
 # XML yardımcıları
 # --------------------------------------------------------------------------- #
+def _jval(r: dict, *keys):
+    """BALANCEHTML JSON'dan ilk DOLU anahtarı döndürür.
+    Alt çizgili/çizgisiz varyantları otomatik dener (ERP alan adı değişikliğine dayanıklı)."""
+    for k in keys:
+        for kk in (k, k.replace("_", "")):
+            v = r.get(kk)
+            if v not in (None, ""):
+                return v
+    return None
+
+
 def _to_decimal(s) -> Optional[Decimal]:
     if s is None:
         return None
@@ -214,9 +225,9 @@ def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
     if bh:
         try:
             for r in json.loads(bh):
-                pb = r.get("CURRENCY", m.firma_pb)
-                dov_bakiye = _to_decimal(r.get("DOVIZ_BAKIYE")) or Decimal("0")
-                tl_bakiye = _to_decimal(r.get("TL_BAKIYE"))
+                pb = _jval(r, "CURRENCY") or m.firma_pb
+                dov_bakiye = _to_decimal(_jval(r, "DOVIZ_BAKIYE")) or Decimal("0")
+                tl_bakiye = _to_decimal(_jval(r, "TL_BAKIYE"))
                 if tl_bakiye is None:
                     tl_bakiye = dov_bakiye
                 # Bakiye = Borç - Alacak: negatif -> Alacak, pozitif -> Borç
@@ -224,8 +235,9 @@ def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
                 m.satirlar.append(
                     MutabakatSatiri(ba, abs(dov_bakiye), pb, abs(tl_bakiye), "TL")
                 )
-                if r.get("ACCOUNT") and not m.cari_kod:
-                    m.cari_kod = m.cari_adi = r["ACCOUNT"]
+                hesap = _jval(r, "ACCOUNT")
+                if hesap and not m.cari_kod:
+                    m.cari_kod = m.cari_adi = hesap
         except Exception:
             logger.warning("BALANCEHTML JSON parse edilemedi: %s", bh[:200], exc_info=True)
 

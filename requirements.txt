@@ -5,3 +5,4 @@ waitress>=3.0          # Windows üretim WSGI sunucusu
 
 # Bu proje veritabanı KULLANMAZ; bu yüzden bir DB sürücüsüne gerek yoktur.
 requests>=2.31         # Erecon (ERP) servislerine HTTP istekleri
+Pillow>=10.0           # Firma logosunun etraftaki boşluğunu kırpmak için
