@@ -93,6 +93,21 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -.02em; }
 .site-footer .container { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .footer-sep { opacity: .5; }
 
+/* ---------- mizoye kredisi ---------- */
+.mizoye-credit {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 15px; color: var(--muted); text-decoration: none;
+    letter-spacing: .02em; transition: opacity .15s ease;
+}
+.mizoye-credit .mizoye-logo { height: 42px; width: auto; display: block; }
+.mizoye-credit:hover { opacity: .72; }
+.footer-mizoye { margin-left: auto; }
+/* Giris ekraninda: sag panelin sag alt kosesi */
+.login-mizoye { position: absolute; right: 30px; bottom: 20px; }
+@media (max-width: 560px) {
+    .footer-mizoye { margin-left: 0; }
+}
+
 /* ---------- Grup markaları şeridi (karşılama sayfası) ---------- */
 .partner-strip {
     background: var(--paper); border-top: 1px solid var(--line);
@@ -187,7 +202,7 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -.02em; }
 .lv-bottom svg { flex: none; }
 
 /* Sağ şifre paneli */
-.login-panel { display: grid; place-items: center; padding: 48px 40px; background: var(--paper); }
+.login-panel { position: relative; display: grid; place-items: center; padding: 48px 40px; background: var(--paper); }
 .login-card { width: 100%; max-width: 400px; }
 .login-eyebrow { color: var(--red); font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; }
 .login-card h2 { margin: 12px 0 8px; font-size: 27px; color: var(--ink-900); font-weight: 800; }
@@ -355,6 +370,12 @@ textarea.form-input { resize: vertical; min-height: 104px; line-height: 1.5; }
     .login-eyebrow { color: #ff8379; }
     .login-card .field label { color: #cdd8e6; }
     .login-secure { color: #9fb0c4; }
+    /* Koyu zeminde lacivert logo okunsun diye acik chip */
+    .login-mizoye {
+        right: 50%; transform: translateX(50%);
+        background: #ffffff; padding: 6px 12px; border-radius: 9px;
+        color: var(--muted);
+    }
 }
 @media (max-width: 620px) {
     .doc { border-radius: var(--r); }

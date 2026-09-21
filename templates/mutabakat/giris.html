@@ -44,7 +44,7 @@
             <form method="post" novalidate>
                 {% csrf_token %}
                 <div class="field">
-                    <label for="{{ form.sifre.id_for_label }}">Doğrulama Kodu</label>
+                    <label for="{{ form.sifre.id_for_label }}">Mailde İletilen Kod</label>
                     {{ form.sifre }}
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">
@@ -58,6 +58,11 @@
                 <span>Kodunuz yalnızca size özeldir, gizli tutunuz.</span>
             </div>
         </div>
+
+        <a class="mizoye-credit login-mizoye" href="https://mizoye.com" target="_blank" rel="noopener">
+            <img src="{% static 'img/mizlogo.png' %}" alt="Mizoye" class="mizoye-logo">
+            <span>tarafından geliştirilmiştir</span>
+        </a>
     </div>
 </section>
 {% endblock %}

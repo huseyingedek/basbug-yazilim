@@ -10,7 +10,7 @@ class SifreForm(forms.Form):
         max_length=16,
         widget=forms.TextInput(attrs={
             "class": "form-input",
-            "placeholder": "Doğrulama kodunu giriniz",
+            "placeholder": "Mailde size iletilen kodu giriniz",
             "inputmode": "numeric",
             "pattern": "[0-9]*",
             "maxlength": "16",
