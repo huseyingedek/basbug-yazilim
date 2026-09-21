@@ -202,13 +202,17 @@ def erecon_list(guid: str, kod: str) -> str:
     return _return_or_raise(r)
 
 
-def erecon_update(guid: str, kod: str, karar_kodu, dosya_b64: str = "",
+def erecon_update(ukey: str, confirmcode: str, karar_kodu, dosya_b64: str = "",
                   ad_soyad: str = "", mesaj: str = "") -> str:
     """
-    Müşteri kararını iletir. PARAM sırası (dokümandaki örneğe göre):
-      1) guid  2) kod  3) karar kodu  4) dosya(base64)  5) ad soyad  6) mesaj
+    Müşteri kararını iletir. PARAM sırası:
+      1) UKEY  2) CONFIRMCODE  3) karar kodu  4) dosya(base64)  5) ad soyad  6) mesaj
+
+    ÖNEMLİ (Bora): UKEY ve CONFIRMCODE, EReconList'in DÖNDÜĞÜ kaydın değerleridir;
+    kullanıcının linkte gönderdiği GUID/kod değildir. ERP gelen GUID'i başka bir
+    kayda eşleyip farklı UKEY/CONFIRMCODE dönebildiği için karar o kayda işlenir.
     """
-    body = _xml(guid, kod, karar_kodu, dosya_b64 or "", ad_soyad or "", mesaj or "").encode("utf-8")
+    body = _xml(ukey, confirmcode, karar_kodu, dosya_b64 or "", ad_soyad or "", mesaj or "").encode("utf-8")
     r = requests.post(_mw("/erecon/update"), data=body, headers=_headers(), timeout=120)
     return _return_or_raise(r)
 
@@ -246,3 +250,48 @@ def dosya_to_base64(dosya) -> str:
     except Exception:
         pass
     return base64.b64encode(dosya.read()).decode("ascii")
+
+
+# --------------------------------------------------------------------------- #
+# E-Recon Entegrasyon Dökümanı v1.0 — 3 yeni servis
+#   1) EReconRequest   : VKN + tarih aralığı -> mutabakat talebi (MESSAGETABLE)
+#   2) GetReconDash    : VKN + yıl + dönem  -> dashboard verisi (RESPONSE/DATA base64)
+#   3) AccountStatement: UUID(30)           -> hesap ekstresi   (RESPONSE/DATA base64)
+# Servis yolları .env ile değiştirilebilir (ERECON_*_PATH); varsayılanlar tahminî,
+# İbrahim'den kesin path'ler teyit edilince .env'e yazılır — kod değişmez.
+# --------------------------------------------------------------------------- #
+def erecon_request(pstaxnum: str, pssdate: str, psedate: str) -> str:
+    """
+    EReconRequest: VKN + tarih aralığı ile mutabakat talebi oluşturur; ERP'de
+    mutabakat sürecini başlatır.
+    Gövde PARAM sırası: 1) PSTAXNUM  2) PSSDATE(dd.mm.yyyy)  3) PSEDATE(dd.mm.yyyy)
+    Dönen: MESSAGETABLE (TYPE / SYSTEMMSG).
+    """
+    body = _xml(pstaxnum, pssdate, psedate).encode("utf-8")
+    path = _cfg("ERECON_REQUEST_PATH", "/erecon/request")
+    r = requests.request("GET", _mw(path), data=body, headers=_headers(), timeout=60)
+    return _return_or_raise(r)
+
+
+def get_recon_dash(pstaxnum: str, psyear: str, psperiod: str) -> str:
+    """
+    GetReconDash: VKN + mali yıl + dönem(ay) ile dashboard verisini getirir.
+    Gövde PARAM sırası: 1) PSTAXNUM  2) PSYEAR(4)  3) PSPERIOD(2)
+    Dönen: <RESPONSE><DATA>base64</DATA></RESPONSE>  (base64 içeriği ZIP/xlsx olabilir).
+    """
+    body = _xml(pstaxnum, psyear, psperiod).encode("utf-8")
+    path = _cfg("ERECON_DASH_PATH", "/erecon/getrecondash")
+    r = requests.request("GET", _mw(path), data=body, headers=_headers(), timeout=120)
+    return _return_or_raise(r)
+
+
+def account_statement(uuid: str) -> str:
+    """
+    AccountStatement: UUID(30) ile hesap ekstresini getirir.
+    Gövde PARAM: 1) PS1 (UUID, 30 karakter, zorunlu)
+    Dönen: <RESPONSE><DATA>base64</DATA></RESPONSE>  (base64 içeriği genelde PDF).
+    """
+    body = _xml(uuid).encode("utf-8")
+    path = _cfg("ERECON_STATEMENT_PATH", "/erecon/accountstatement")
+    r = requests.request("GET", _mw(path), data=body, headers=_headers(), timeout=120)
+    return _return_or_raise(r)

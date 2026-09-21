@@ -101,7 +101,8 @@ h1, h2, h3 { font-family: var(--display); letter-spacing: -.02em; }
 }
 .mizoye-credit .mizoye-logo { height: 42px; width: auto; display: block; }
 .mizoye-credit:hover { opacity: .72; }
-.footer-mizoye { margin-left: auto; }
+.footer-mizoye { margin-left: auto; font-size: 12px; }
+.footer-mizoye .mizoye-logo { height: 22px; }
 /* Giris ekraninda: sag panelin sag alt kosesi */
 .login-mizoye { position: absolute; right: 30px; bottom: 20px; }
 @media (max-width: 560px) {
