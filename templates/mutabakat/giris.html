@@ -37,6 +37,12 @@
             <h2>Mutabakat Ekranı</h2>
             <p class="sub">Devam etmek için e-postanızda tarafınıza iletilen 8 haneli kodu giriniz.</p>
 
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
             {% if hata %}
                 <div class="alert alert-error">{{ hata }}</div>
             {% endif %}

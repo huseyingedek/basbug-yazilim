@@ -1,11 +1,58 @@
 import base64
 
 from django.contrib import messages
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 
 from .forms import CevapForm, SifreForm
-from .services import firma_logo_b64, get_kayit, gonder_cevap, sifre_dogru
+from .services import (
+    firma_logo_b64,
+    get_kayit,
+    gonder_cevap,
+    onceki_ay_son_gun,
+    sifre_dogru,
+    talep_olustur,
+    talep_son_mutabakat_bitis,
+)
+
+
+# --------------------------------------------------------------------------- #
+# Talep oluştur (dışarıdan): ana ekrandaki "Talep Oluştur" butonu buraya gelir.
+# Kişiye özel link gerekmez; müşteri/tedarikçi VKN + tarih aralığı ile talep açar.
+# --------------------------------------------------------------------------- #
+def talep(request):
+    bitis_default = onceki_ay_son_gun().isoformat()
+
+    if request.method == "POST":
+        vkn = (request.POST.get("vkn") or "").strip()
+        email = (request.POST.get("email") or "").strip()
+        bas = (request.POST.get("baslangic") or "").strip()
+        bit = (request.POST.get("bitis") or "").strip()
+
+        if not vkn:
+            sonuc = ("hata", "Vergi numarası (VKN) zorunludur.")
+        elif not email:
+            sonuc = ("hata", "E-posta adresi zorunludur.")
+        else:
+            ok, mesaj = talep_olustur(vkn=vkn, baslangic=bas, bitis=bit, email=email)
+            sonuc = ("ok" if ok else "hata", mesaj)
+
+        return render(request, "mutabakat/talep.html", {
+            "sonuc": sonuc, "vkn": vkn, "email": email,
+            "baslangic": bas, "bitis": bit or bitis_default,
+        })
+
+    # GET: bitişi önceden dolduralım (önceki ayın son günü). Başlangıç, VKN
+    # girilince (talep_son_tarih) otomatik gelecek.
+    return render(request, "mutabakat/talep.html",
+                  {"baslangic": "", "bitis": bitis_default})
+
+
+def talep_son_tarih(request):
+    """VKN -> son mutabakat bitiş tarihi (başlangıç önerisi). JSON döner."""
+    vkn = (request.GET.get("vkn") or "").strip()
+    d = talep_son_mutabakat_bitis(vkn)
+    return JsonResponse({"baslangic": d.isoformat() if d else "", "bulundu": bool(d)})
 
 
 def _ok_key(token):
@@ -102,14 +149,19 @@ def cevap(request, token):
         return render(request, "mutabakat/detay.html",
                       {"m": m, "form": CevapForm(), "token": token})
 
-    # ok=True (TYPE!=E): sonucu YEŞİL olarak DETAYDA göster (login'de mesaj yok).
+    # ok=True (TYPE!=E): oturumu kapat ve GİRİŞ (onay kodu) ekranına yeşil
+    # bilgilendirme mesajıyla dön. (Bora: gönderdikten sonra başa dönsün ki
+    # kullanıcı "iletilmedi" sanıp tekrar basmasın -> çift gönderim / "zaten
+    # güncellenmiş kayıt tekrar güncellenemez" hatası yaşanmasın.)
+    request.session.pop(_ok_key(token), None)
+    request.session.pop(_kod_key(token), None)
     if mesaj:
         messages.success(request, mesaj)
     elif form.cleaned_data["karar"] == "itiraz":
-        messages.success(request, "İtiraz bildiriminiz alınmıştır. Teşekkür ederiz.")
+        messages.success(request, "İtiraz bildiriminiz tarafımıza iletilmiştir. Teşekkür ederiz.")
     else:
-        messages.success(request, "Mutabakat onayınız alınmıştır. Teşekkür ederiz.")
-    return redirect("mutabakat:detay", token=token)
+        messages.success(request, "Mutabakat onayınız tarafımıza iletilmiştir. Teşekkür ederiz.")
+    return redirect("mutabakat:giris", token=token)
 
 
 # --------------------------------------------------------------------------- #
