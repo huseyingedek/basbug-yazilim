@@ -16,6 +16,9 @@ db.sqlite3-journal
 # Ortam
 .env
 
+# Servisten çekilen firma logoları (haftalık yenilenir)
+/firma_logolari/
+
 # Editor / OS
 .vscode/
 .idea/

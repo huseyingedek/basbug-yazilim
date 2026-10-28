@@ -77,6 +77,7 @@ class Mutabakat:
     confirmcode: str = ""     # ERP CONFIRMCODE (list yanıtından; update'e gönderilir)
     ukey: str = ""            # ERP UKEY (list yanıtından; update'e gönderilir)
     durum: str = ""           # ERECONSTATUS
+    firma_kodu: str = ""      # COMPANY (logo dosyası bu koda göre seçilir)
 
 
 class BaseDataSource:
@@ -218,6 +219,7 @@ def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
         confirmcode=g("CONFIRMCODE"),
         ukey=g("UKEY"),
         durum=g("ERECONSTATUS"),
+        firma_kodu=g("COMPANY"),
         sfile_b64=g("SFILE"),
         tfile_b64=g("TFILE"),
     )
@@ -284,21 +286,6 @@ def get_kayit(token: str, kod: str = "") -> Optional[Mutabakat]:
 
 def sifre_dogru(token: str, kod: str) -> bool:
     return get_data_source().sifre_dogru(token, kod)
-
-
-def firma_logo_b64(token):
-    """
-    Mutabakatın gönderildiği firmanın logosu (base64). ERP modunda EReconCompanyPict
-    servisinden çeker; mock modda veya hata/logosuz durumda boş string döner.
-    """
-    kaynak = getattr(settings, "MUTABAKAT_DATA_SOURCE", "mock").lower()
-    if kaynak != "erp":
-        return ""
-    try:
-        return erecon.erecon_company_pict(guid=token)
-    except Exception:
-        logger.warning("Firma logosu alınamadı (token=%s)", token, exc_info=True)
-        return ""
 
 
 def gonder_cevap(token, mutabakat, karar, mesaj="", ad_soyad="", dosya=None, kod=""):

@@ -241,6 +241,22 @@ def erecon_company_pict(guid: str) -> str:
     return s
 
 
+def erecon_company_pict_tumu() -> str:
+    """
+    EReconCompanyPict BOŞ parametreyle: TÜM firmaların logolarını döndürür.
+    Gövde: <PARAMETERS><PARAM></PARAM></PARAMETERS>
+    Dönen: JSON metin (gövde base64'lü de gelebilir) -> her kayıtta
+           COMPANY (firma kodu) + LOGOBASE64 (logo). Çözümleme: logolar.yanit_coz
+    Haftada bir çağrılır (manage.py logo_guncelle); sayfa açılışında ÇAĞRILMAZ.
+    """
+    body = _xml("").encode("utf-8")
+    path = _cfg("ERECON_PICT_PATH", "/erecon/companypict")
+    r = requests.request("GET", _mw(path), data=body, headers=_headers(), timeout=120)
+    logger.info("EReconCompanyPict (tümü): status=%s uzunluk=%s", r.status_code, len(r.text or ""))
+    r.raise_for_status()
+    return r.text or ""
+
+
 def dosya_to_base64(dosya) -> str:
     """Django UploadedFile -> base64 metin. Dosya yoksa boş string."""
     if not dosya:

@@ -5,8 +5,8 @@ from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 
 from .forms import CevapForm, SifreForm
+from .logolar import _icerik_tipi, _pdf_onar, logo_getir
 from .services import (
-    firma_logo_b64,
     get_kayit,
     gonder_cevap,
     onceki_ay_son_gun,
@@ -168,92 +168,6 @@ def cevap(request, token):
 # Dosya indirme: Mutabakat Mektubu (SFILE) / Ekstre (TFILE)
 # ERP dosyayı base64 içinde gönderir; PDF veya PNG olabilir.
 # --------------------------------------------------------------------------- #
-def _pdf_onar(raw: bytes) -> bytes:
-    """
-    ERP, dosyayı base64'lemeden önce ikili veriyi ISO-8859-9 metin gibi okuyup
-    UTF-8'e çevirerek bozabiliyor (mojibake): 0x9C -> 0xC2 0x9C gibi. Ham ikili
-    veri geçerli UTF-8 OLMAZ; eğer bytes UTF-8'e çözülebiliyorsa bozulmuştur,
-    ISO-8859-9'a geri kodlayarak orijinali kurtarırız. Zaten temizse (ham ikili)
-    UTF-8 decode hata verir, dokunmadan döneriz. PNG gibi temiz gelen dosyalara
-    dokunmaz.
-    """
-    try:
-        s = raw.decode("utf-8")
-    except UnicodeDecodeError:
-        return raw  # zaten temiz ikili
-    try:
-        return s.encode("iso-8859-9")
-    except UnicodeEncodeError:
-        return raw
-
-
-def _icerik_tipi(raw: bytes):
-    """Sihirli baytlara göre (content_type, uzanti) döndürür."""
-    if raw[:4] == b"%PDF":
-        return "application/pdf", "pdf"
-    if raw[:8] == b"\x89PNG\r\n\x1a\n":
-        return "image/png", "png"
-    if raw[:3] == b"\xff\xd8\xff":
-        return "image/jpeg", "jpg"
-    return "application/octet-stream", "bin"
-
-
-def _logo_kirp(raw: bytes) -> bytes:
-    """
-    Firma logosu bazen büyük bir tuval içinde (bol boşlukla) geliyor; bu durumda
-    başlıktaki plakaya sığdırılınca logo minicik görünüyor. Etraftaki saydam VEYA
-    beyaza yakın boşluğu kırpıp logoyu tuvale oturtur, PNG olarak döner.
-
-    Pillow yoksa veya görsel çözülemezse ham veriyi olduğu gibi döndürür
-    (güvenli geri düşüş).
-    """
-    try:
-        import io
-
-        from PIL import Image, ImageChops
-    except Exception:
-        return raw
-    try:
-        im = Image.open(io.BytesIO(raw))
-        im.load()
-    except Exception:
-        return raw
-
-    rgba = im.convert("RGBA")
-
-    # 1) Saydam kenarlar: alfa kanalının sınır kutusu.
-    alpha = rgba.getchannel("A")
-    bbox = alpha.getbbox() if alpha.getextrema()[0] < 255 else None
-
-    # 2) Saydamlık yoksa beyaza yakın kenarları kırp.
-    if bbox is None:
-        rgb = rgba.convert("RGB")
-        bg = Image.new("RGB", rgb.size, (255, 255, 255))
-        diff = ImageChops.difference(rgb, bg)
-        bbox = diff.getbbox()
-
-    if not bbox:
-        return raw
-
-    # Küçük bir nefes payı bırak.
-    pad = max(2, int(min(rgba.width, rgba.height) * 0.04))
-    l, t, r, b = bbox
-    l = max(0, l - pad)
-    t = max(0, t - pad)
-    r = min(rgba.width, r + pad)
-    b = min(rgba.height, b + pad)
-
-    kirpik = rgba.crop((l, t, r, b))
-
-    # Kırpma anlamlı değilse (zaten sıkı) dokunma.
-    if kirpik.width >= rgba.width * 0.98 and kirpik.height >= rgba.height * 0.98:
-        return raw
-
-    out = io.BytesIO()
-    kirpik.save(out, format="PNG")
-    return out.getvalue()
-
-
 def _dosya_indir(request, token, alan, taban_ad):
     token = str(token)
     if not _girisli_mi(request, token):
@@ -276,28 +190,22 @@ def _dosya_indir(request, token, alan, taban_ad):
 
 def firma_logo(request, token):
     """
-    Mutabakatın gönderildiği firmanın logosunu (EReconCompanyPict) görsel olarak
-    servis eder. Logo yoksa 404 -> şablon varsayılan görünüme düşer.
+    Firma logosunu DOSYADAN servis eder (firma_logolari/<COMPANY>.png).
+    Servis her açılışta çağrılmaz; logolar haftalık `manage.py logo_guncelle`
+    ile yenilenir. Firma kodu ?f=<COMPANY> ile gelir (EReconList yanıtından).
+    Logo yoksa 404 -> şablon Başbuğ logosuna düşer.
     """
     token = str(token)
     if not _girisli_mi(request, token):
         return redirect("mutabakat:giris", token=token)
-    b64 = firma_logo_b64(token)
-    if not b64:
+    kod = (request.GET.get("f") or "").strip()
+    yol = logo_getir(kod)
+    if not yol:
         raise Http404("Firma logosu bulunamadı.")
-    try:
-        icerik = _pdf_onar(base64.b64decode(b64))
-    except Exception:
-        raise Http404("Firma logosu çözümlenemedi.")
-    ctype, uzanti = _icerik_tipi(icerik)
-    # PNG/JPEG ise etraftaki boşluğu kırp ki başlıkta minicik görünmesin.
-    if ctype in ("image/png", "image/jpeg"):
-        kirpik = _logo_kirp(icerik)
-        if kirpik is not icerik and kirpik[:8] == b"\x89PNG\r\n\x1a\n":
-            icerik, ctype, uzanti = kirpik, "image/png", "png"
-    resp = HttpResponse(icerik, content_type=ctype)
-    resp["Content-Disposition"] = f'inline; filename="firma-logo.{uzanti}"'
-    resp["Cache-Control"] = "private, max-age=300"
+    ctype = "image/png" if yol.suffix == ".png" else "image/jpeg"
+    resp = HttpResponse(yol.read_bytes(), content_type=ctype)
+    resp["Content-Disposition"] = f'inline; filename="firma-logo{yol.suffix}"'
+    resp["Cache-Control"] = "private, max-age=3600"
     return resp
 
 

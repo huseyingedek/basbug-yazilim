@@ -6,7 +6,7 @@
 {% block body_class %}page-detay{% endblock %}
 
 {% comment %} Header logosu: mutabakatın gönderildiği firmanın logosu; gelmezse Başbuğ. {% endcomment %}
-{% block brand_logo %}<img src="{% url 'mutabakat:logo' token=token %}" alt="{{ m.cari_adi }}" class="brand-logo brand-logo--plate"
+{% block brand_logo %}<img src="{% url 'mutabakat:logo' token=token %}?f={{ m.firma_kodu|urlencode }}" alt="{{ m.cari_adi }}" class="brand-logo brand-logo--plate"
      onerror="this.onerror=null;this.classList.remove('brand-logo--plate');this.src='{% static 'img/basbug_logo.png' %}';">{% endblock %}
 
 {% block content %}
