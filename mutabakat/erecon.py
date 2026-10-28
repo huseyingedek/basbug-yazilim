@@ -241,15 +241,21 @@ def erecon_company_pict(guid: str) -> str:
     return s
 
 
+# "Tüm logolar" isteği için gönderilen sabit (boş PARAM middleware'den geçmiyor).
+TUM_LOGOLAR_GUID = "00000000-0000-0000-0000-000000000000"
+
+
 def erecon_company_pict_tumu() -> str:
     """
-    EReconCompanyPict BOŞ parametreyle: TÜM firmaların logolarını döndürür.
-    Gövde: <PARAMETERS><PARAM></PARAM></PARAMETERS>
+    EReconCompanyPict "tümü" çağrısı: TÜM firmaların logolarını döndürür.
+    Gövde: <PARAMETERS><PARAM>00000000-0000-0000-0000-000000000000</PARAM></PARAMETERS>
+    Not: Boş PARAM middleware'de reddediliyor ("UUID must be 36 characters"),
+    bu yüzden "tümü" anlamında SIFIR GUID gönderilir (Bora ile kararlaştırıldı).
     Dönen: JSON metin (gövde base64'lü de gelebilir) -> her kayıtta
            COMPANY (firma kodu) + LOGOBASE64 (logo). Çözümleme: logolar.yanit_coz
     Haftada bir çağrılır (manage.py logo_guncelle); sayfa açılışında ÇAĞRILMAZ.
     """
-    body = _xml("").encode("utf-8")
+    body = _xml(TUM_LOGOLAR_GUID).encode("utf-8")
     path = _cfg("ERECON_PICT_PATH", "/erecon/companypict")
     r = requests.request("GET", _mw(path), data=body, headers=_headers(), timeout=120)
     logger.info("EReconCompanyPict (tümü): status=%s uzunluk=%s", r.status_code, len(r.text or ""))
