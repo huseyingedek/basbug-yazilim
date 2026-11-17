@@ -128,6 +128,11 @@ def cevap(request, token):
     if request.method != "POST":
         return redirect("mutabakat:detay", token=token)
 
+    # Daha önce onay/red verilmiş kayıt: servise tekrar gönderme (ERP "Güncellenmiş
+    # kayıt tekrardan güncellenemez" hatası verir). Detay zaten bilgilendirme gösterir.
+    if m.cevaplandi:
+        return redirect("mutabakat:detay", token=token)
+
     form = CevapForm(request.POST, request.FILES)
     if not form.is_valid():
         return render(request, "mutabakat/detay.html",
@@ -142,6 +147,13 @@ def cevap(request, token):
         ad_soyad=form.cleaned_data["ad_soyad"],
         dosya=form.cleaned_data.get("dosya"),
     )
+
+    if not ok and "güncellenemez" in (mesaj or "").lower():
+        # Kayıt bu arada (ör. başka sekmeden) cevaplanmış: hata değil, bilgi ver.
+        request.session.pop(_ok_key(token), None)
+        request.session.pop(_kod_key(token), None)
+        messages.info(request, "Bu mutabakat için bildiriminiz daha önce tarafımıza iletilmiştir.")
+        return redirect("mutabakat:giris", token=token)
 
     if not ok:
         # Servis hatası (TYPE=E): detayda kal, hatayı kırmızı göster.

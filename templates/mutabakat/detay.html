@@ -118,6 +118,10 @@
         </div>
 
         <div class="decision">
+            {% if m.cevaplandi %}
+            {# Daha önce onay/red verilmiş: butonları gösterme, bilgilendir. #}
+            <div class="alert alert-info decision-done">{{ m.karar_bilgi_mesaji }}</div>
+            {% else %}
             <p class="decision-q">Lütfen bakiye durumunu değerlendirip uygun seçeneği işaretleyiniz.</p>
 
             <form method="post" action="{% url 'mutabakat:cevap' token=token %}"
@@ -175,6 +179,7 @@
                     </div>
                 </div>
             </form>
+            {% endif %}
         </div>
     </div>
 </section>

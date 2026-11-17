@@ -33,6 +33,15 @@ logger = logging.getLogger(__name__)
 # Karar kodları (Erecon /erecon/update 3. PARAM). 1=onay, 2=itiraz.
 KARAR_KODU = {"mutabik": "1", "itiraz": "2"}
 
+# ERECONSTATUS: 0 = gönderildi/yanıt bekleniyor, 1 = onaylandı, 2 = reddedildi (itiraz)
+DURUM_ONAY = "1"
+DURUM_RED = "2"
+
+# Kararın verildiği tarih bu alanlardan İLK DOLU olandan okunur. Bora/İbrahim
+# kesin alan adını söyleyince başa eklenir; şimdilik kaydın son değişiklik
+# zamanı (CHANGEDAT) kullanılıyor.
+KARAR_TARIHI_ALANLARI = ("CHANGEDAT",)
+
 # FINPERIOD (dönem no) -> ay adı
 _AYLAR = {
     "01": "Ocak", "02": "Şubat", "03": "Mart", "04": "Nisan", "05": "Mayıs",
@@ -76,8 +85,34 @@ class Mutabakat:
     tfile_b64: str = ""       # Ekstre ham base64
     confirmcode: str = ""     # ERP CONFIRMCODE (list yanıtından; update'e gönderilir)
     ukey: str = ""            # ERP UKEY (list yanıtından; update'e gönderilir)
-    durum: str = ""           # ERECONSTATUS
+    durum: str = ""           # ERECONSTATUS (0 bekliyor, 1 onay, 2 red)
+    karar_tarihi: str = ""    # Onay/red tarihi (KARAR_TARIHI_ALANLARI)
     firma_kodu: str = ""      # COMPANY (logo dosyası bu koda göre seçilir)
+
+
+    @property
+    def cevaplandi(self) -> bool:
+        """Müşteri daha önce onay veya red vermiş mi?"""
+        return self.durum in (DURUM_ONAY, DURUM_RED)
+
+    @property
+    def karar_bilgi_mesaji(self) -> str:
+        """Daha önce cevaplanmış kayıt için bilgilendirme metni."""
+        if not self.cevaplandi:
+            return ""
+        fiil = "onaylanmıştır" if self.durum == DURUM_ONAY else "reddedilmiştir"
+        if self.karar_tarihi:
+            return f"Mutabakat için bildiriminiz {self.karar_tarihi} tarihinde {fiil}."
+        return f"Mutabakat için bildiriminiz {fiil}."
+
+
+def _tarih_kisa(s: str) -> str:
+    """'12.11.2026 14:35:20' -> '12.11.2026 14:35'; saat 00:00 ise sadece tarih."""
+    s = (s or "").strip()
+    if len(s) >= 16 and s[2] == "." and s[5] == ".":
+        tarih, saat = s[:10], s[11:16]
+        return tarih if saat == "00:00" else f"{tarih} {saat}"
+    return s
 
 
 class BaseDataSource:
@@ -219,6 +254,7 @@ def _parse_list_response(xml_text: str, token: str) -> Optional[Mutabakat]:
         confirmcode=g("CONFIRMCODE"),
         ukey=g("UKEY"),
         durum=g("ERECONSTATUS"),
+        karar_tarihi=_tarih_kisa(next((g(a) for a in KARAR_TARIHI_ALANLARI if g(a)), "")),
         firma_kodu=g("COMPANY"),
         sfile_b64=g("SFILE"),
         tfile_b64=g("TFILE"),

@@ -404,6 +404,8 @@ textarea.form-input { resize: vertical; min-height: 104px; line-height: 1.5; }
 .list-stat strong { font-family: var(--display); font-size: 28px; color: var(--red); }
 
 .alert-success { background: var(--ok-tint); color: var(--ok); border: 1px solid #bfe6cf; }
+.alert-info { background: #eef4fb; color: #1f4f8a; border: 1px solid #c8daf0; }
+.decision-done { margin: 0; text-align: center; font-size: 14.5px; }
 
 .cari-list { display: flex; flex-direction: column; gap: 12px; }
 .cari-row {
