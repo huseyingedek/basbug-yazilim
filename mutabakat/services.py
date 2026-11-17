@@ -97,13 +97,15 @@ class Mutabakat:
 
     @property
     def karar_bilgi_mesaji(self) -> str:
-        """Daha önce cevaplanmış kayıt için bilgilendirme metni."""
+        """Daha önce cevaplanmış kayıt için bilgilendirme metni.
+        Ör: '16 Kasım 2026 tarihinde bildiriminiz Mutabık olarak yapılmıştır.'"""
         if not self.cevaplandi:
             return ""
-        fiil = "onaylanmıştır" if self.durum == DURUM_ONAY else "reddedilmiştir"
-        if self.karar_tarihi:
-            return f"Mutabakat için bildiriminiz {self.karar_tarihi} tarihinde {fiil}."
-        return f"Mutabakat için bildiriminiz {fiil}."
+        karar = "Mutabık" if self.durum == DURUM_ONAY else "Mutabık Değiliz"
+        tarih = _tarih_uzun(self.karar_tarihi)
+        if tarih:
+            return f"{tarih} tarihinde bildiriminiz {karar} olarak yapılmıştır."
+        return f"Bildiriminiz {karar} olarak yapılmıştır."
 
 
 def _tarih_kisa(s: str) -> str:
@@ -112,6 +114,16 @@ def _tarih_kisa(s: str) -> str:
     if len(s) >= 16 and s[2] == "." and s[5] == ".":
         tarih, saat = s[:10], s[11:16]
         return tarih if saat == "00:00" else f"{tarih} {saat}"
+    return s
+
+
+def _tarih_uzun(s: str) -> str:
+    """'16.11.2026 14:35' -> '16 Kasım 2026'. Tanınmazsa olduğu gibi döner."""
+    s = (s or "").strip()
+    if len(s) >= 10 and s[2] == "." and s[5] == ".":
+        gun, ay, yil = s[:2], s[3:5], s[6:10]
+        if ay in _AYLAR:
+            return f"{int(gun)} {_AYLAR[ay]} {yil}"
     return s
 
 
